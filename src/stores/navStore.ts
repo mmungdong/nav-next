@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ICategory, ISettings } from '@/types';
+import { ICategory, IWebsite, ISettings } from '@/types';
 
 interface NavState {
   categories: ICategory[];
@@ -8,6 +8,49 @@ interface NavState {
   fetchCategories: () => Promise<void>;
   updateCategories: (categories: ICategory[]) => void;
 }
+
+// 转换原始的四层嵌套数据结构为两层结构
+const transformCategories = (rawData: any[]): ICategory[] => {
+  return rawData.map(category => {
+    // 第一层分类
+    const websites: IWebsite[] = [];
+
+    // 遍历第二层分类
+    if (category.nav && Array.isArray(category.nav)) {
+      category.nav.forEach(subCategory => {
+        // 遍历第三层分类
+        if (subCategory.nav && Array.isArray(subCategory.nav)) {
+          subCategory.nav.forEach(subSubCategory => {
+            // 获取第四层网站数据
+            if (subSubCategory.nav && Array.isArray(subSubCategory.nav)) {
+              subSubCategory.nav.forEach((website: any) => {
+                websites.push({
+                  id: website.id,
+                  name: website.name || website.title || '未知网站',
+                  desc: website.desc || '',
+                  url: website.url || '',
+                  icon: website.icon || '',
+                  tags: website.tags || [],
+                  rate: website.rate || 0,
+                  top: website.top || false,
+                  ownVisible: website.ownVisible || false,
+                  ...website // 保留其他字段
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return {
+      id: category.id,
+      title: category.title || category.name || '未知分类',
+      icon: category.icon || '',
+      nav: websites
+    };
+  });
+};
 
 // 模拟数据获取函数
 const fetchCategoriesData = async (): Promise<ICategory[]> => {
@@ -19,8 +62,9 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
     // 尝试从本地数据文件加载
     const response = await fetch('/data/db.json');
     if (response.ok) {
-      const data = await response.json();
-      return data;
+      const rawData = await response.json();
+      // 转换数据结构
+      return transformCategories(rawData);
     }
   } catch (error) {
     console.warn('Failed to load local data, using mock data:', error);

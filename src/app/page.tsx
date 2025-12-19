@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
+import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from '@/components/DefaultIcon';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
@@ -99,21 +100,36 @@ export default function Home() {
                       >
                         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-colors duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500">
                           <div className="flex items-start">
-                            {website.icon ? (
+                            {website.icon && !isIconUrlFailed(website.icon) ? (
                               <img
                                 src={website.icon}
                                 alt={website.name}
                                 className="w-10 h-10 rounded-lg object-cover mr-3"
                                 onError={(e) => {
-                                  // 如果图标加载失败，显示默认图标
-                                  e.currentTarget.src = '/default-icon.png';
+                                  // 如果图标加载失败，标记为失败并显示默认图标
+                                  markIconUrlAsFailed(website.icon);
+                                  e.currentTarget.style.display = 'none';
+                                  const defaultIconContainer = document.createElement('div');
+                                  defaultIconContainer.className = 'w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3';
+                                  defaultIconContainer.innerHTML = `
+                                    <svg width="24" height="24" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <defs>
+                                        <linearGradient id="defaultIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                          <stop offset="0%" stopColor="#4F46E5" />
+                                          <stop offset="100%" stopColor="#7C3AED" />
+                                        </linearGradient>
+                                      </defs>
+                                      <rect width="40" height="40" rx="10" fill="url(#defaultIconGradient)" />
+                                      <circle cx="20" cy="18" r="5" fill="white" opacity="0.9" />
+                                      <rect x="12" y="25" width="16" height="3" rx="1.5" fill="white" opacity="0.9" />
+                                    </svg>
+                                  `;
+                                  e.currentTarget.parentNode?.insertBefore(defaultIconContainer, e.currentTarget);
                                 }}
                               />
                             ) : (
                               <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                                <span className="text-blue-600 dark:text-blue-300 font-bold">
-                                  {website.name.charAt(0).toUpperCase()}
-                                </span>
+                                <DefaultIcon />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
