@@ -63,55 +63,85 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* 移动端导航按钮 */}
       <button
-        className="lg:hidden fixed top-24 left-4 z-20 p-2 rounded-md bg-white dark:bg-gray-800 shadow-md"
+        className="lg:hidden fixed top-24 left-4 z-20 p-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
         onClick={() => setIsNavOpen(!isNavOpen)}
       >
-        <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
       {/* 左侧分类导航 */}
-      <div className={`fixed lg:relative lg:block z-10 w-64 bg-white dark:bg-gray-800 shadow-sm h-full top-0 overflow-y-auto transition-transform duration-300 ease-in-out transform ${isNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">分类导航</h2>
-            <button
-              className="lg:hidden p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-              onClick={() => setIsNavOpen(false)}
-            >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      <div className={`fixed lg:relative lg:block z-10 w-64 bg-gradient-to-b from-white to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-xl h-full top-0 overflow-y-auto transition-all duration-300 ease-in-out transform ${isNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} lg:shadow-none`}>
+        <div className="p-5">
+          {/* Logo 区域 */}
+          <div className="flex items-center mb-6 pt-2">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center mr-3">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </button>
+            </div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">发现导航</h1>
           </div>
-          <nav>
-            <ul className="space-y-1">
+
+          {/* 导航标题 */}
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">分类导航</h2>
+
+          {/* 关闭按钮（移动端） */}
+          <button
+            className="lg:hidden absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            onClick={() => setIsNavOpen(false)}
+          >
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* 分类导航列表 */}
+          <nav className="mb-20">
+            <ul className="space-y-2">
               {filteredCategories.map((category) => (
                 <li key={category.id}>
                   <a
                     href={`#${category.id}`}
                     onClick={() => setIsNavOpen(false)}
-                    className={`flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                    className={`flex items-center px-4 py-3 text-sm rounded-xl transition-all duration-300 ease-in-out transform group ${
                       activeCategory === category.id.toString()
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
-                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-[1.02]'
+                        : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 hover:scale-[1.01] hover:shadow-sm'
                     }`}
                   >
-                    <span className="mr-2">{category.icon}</span>
-                    <span className="truncate">{category.title}</span>
+                    <span className="mr-3 text-lg flex-shrink-0">{category.icon}</span>
+                    <span className="truncate font-medium">{category.title}</span>
+                    {activeCategory === category.id.toString() && (
+                      <span className="ml-auto flex-shrink-0">
+                        <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
+                    )}
                   </a>
                 </li>
               ))}
             </ul>
           </nav>
+
+          {/* 底部信息 */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>共 {filteredCategories.length} 个分类</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 遮罩层（移动端） */}
       {isNavOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-0"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-30 z-0 backdrop-blur-sm"
           onClick={() => setIsNavOpen(false)}
         ></div>
       )}
