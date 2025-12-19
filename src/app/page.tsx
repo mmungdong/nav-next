@@ -1,16 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from '@/components/DefaultIcon';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // 滚动监听效果
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+
+      const categories = containerRef.current.querySelectorAll('[id]');
+      let currentCategory = '';
+
+      categories.forEach((category) => {
+        const rect = category.getBoundingClientRect();
+        if (rect.top <= 100 && rect.bottom >= 100) {
+          currentCategory = category.getAttribute('id') || '';
+        }
+      });
+
+      setActiveCategory(currentCategory);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (loading) {
     return (
@@ -35,35 +60,91 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 顶部搜索栏 */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">发现导航</h1>
-            <div className="relative w-96">
-              <input
-                type="text"
-                placeholder="搜索网站或分类..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <svg
-                className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      {/* 移动端导航按钮 */}
+      <button
+        className="lg:hidden fixed top-24 left-4 z-20 p-2 rounded-md bg-white dark:bg-gray-800 shadow-md"
+        onClick={() => setIsNavOpen(!isNavOpen)}
+      >
+        <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* 左侧分类导航 */}
+      <div className={`fixed lg:relative lg:block z-10 w-64 bg-white dark:bg-gray-800 shadow-sm h-full top-0 overflow-y-auto transition-transform duration-300 ease-in-out transform ${isNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">分类导航</h2>
+            <button
+              className="lg:hidden p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setIsNavOpen(false)}
+            >
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </div>
+            </button>
           </div>
+          <nav>
+            <ul className="space-y-1">
+              {filteredCategories.map((category) => (
+                <li key={category.id}>
+                  <a
+                    href={`#${category.id}`}
+                    onClick={() => setIsNavOpen(false)}
+                    className={`flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                      activeCategory === category.id.toString()
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="mr-2">{category.icon}</span>
+                    <span className="truncate">{category.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
 
+      {/* 遮罩层（移动端） */}
+      {isNavOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-0"
+          onClick={() => setIsNavOpen(false)}
+        ></div>
+      )}
+
       {/* 主内容区 */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex-1">
+        {/* 顶部搜索栏 */}
+        <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">发现导航</h1>
+              <div className="relative w-96">
+                <input
+                  type="text"
+                  placeholder="搜索网站或分类..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <svg
+                  className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div ref={containerRef} className="max-w-7xl mx-auto px-4 py-8">
         {filteredCategories.length === 0 ? (
           <div className="text-center py-12">
             <svg
@@ -81,7 +162,7 @@ export default function Home() {
         ) : (
           <div className="space-y-8">
             {filteredCategories.map((category) => (
-              <div key={category.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+              <div key={category.id} id={category.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
                 <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
                     <span className="mr-2">{category.icon}</span>
@@ -146,6 +227,7 @@ export default function Home() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
