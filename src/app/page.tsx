@@ -141,21 +141,7 @@ export default function Home() {
                               </p>
                             </div>
                           </div>
-                          <div className="mt-3 flex flex-wrap gap-1">
-                            {website.tags && website.tags.slice(0, 2).map((tag, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
-                              >
-                                {tag.name}
-                              </span>
-                            ))}
-                            {website.tags && website.tags.length > 2 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                                +{website.tags.length - 2}
-                              </span>
-                            )}
-                          </div>
+                          {/* 标签显示已移除 */}
                         </div>
                       </a>
                     ))}
