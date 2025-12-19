@@ -18,9 +18,10 @@ export default function Home() {
   // 监听页面的滚动事件，自动更新左侧菜单的选中项
   useEffect(() => {
     let ticking = false;
+    let isUserNavigating = false;
 
     const handleScroll = () => {
-      if (!ticking) {
+      if (!ticking && !isUserNavigating) {
         requestAnimationFrame(() => {
           if (categories.length === 0) return;
 
@@ -58,9 +59,20 @@ export default function Home() {
       }
     };
 
+    // 当用户点击导航时，暂时禁用滚动监听
+    const handleClickNavigation = () => {
+      isUserNavigating = true;
+      // 1秒后重新启用滚动监听
+      setTimeout(() => {
+        isUserNavigating = false;
+      }, 1000);
+    };
+
     // 延迟绑定滚动事件，确保DOM已经渲染完成
     const timer = setTimeout(() => {
       window.addEventListener('scroll', handleScroll, { passive: true });
+      // 监听自定义的导航点击事件
+      window.addEventListener('click-navigation', handleClickNavigation);
       // 初始化时也触发一次，确保初始状态正确
       handleScroll();
     }, 100);
@@ -68,6 +80,7 @@ export default function Home() {
     return () => {
       clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('click-navigation', handleClickNavigation);
     };
   }, [categories, activeCategory]);
 
@@ -173,8 +186,12 @@ export default function Home() {
                       setIsMenuOpen(false);
                       const element = document.getElementById(category.id.toString());
                       if (element) {
-                        element.scrollIntoView({ behavior: 'smooth' });
+                        // 触发自定义事件，通知滚动监听器用户正在导航
+                        window.dispatchEvent(new CustomEvent('click-navigation'));
+                        // 直接设置激活的分类，避免逐个高亮
                         setActiveCategory(category.id.toString());
+                        // 平滑滚动到目标元素
+                        element.scrollIntoView({ behavior: 'smooth' });
                       }
                     }}
                     className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
