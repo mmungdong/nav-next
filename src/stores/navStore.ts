@@ -17,11 +17,11 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
   // 返回模拟数据或从本地文件加载数据
   try {
     // 尝试从本地数据文件加载
-    const response = await fetch('/data/transformed_db.json');
+    const response = await fetch('/data/db.json');
     if (response.ok) {
       const rawData = await response.json();
 
-      // transformed_db.json已经是两层结构，直接返回
+      // db.json现在已经是两层结构，直接返回
       return rawData.map((category: any) => ({
         id: category.id,
         title: category.title || category.name || '未知分类',
