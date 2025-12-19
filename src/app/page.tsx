@@ -4,12 +4,14 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { useAuthStore } from '@/stores/authStore';
 import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from '@/components/DefaultIcon';
+import SearchModal from '@/components/SearchModal';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const { isAuthenticated } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('');
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -331,6 +333,17 @@ export default function Home() {
           </svg>
         </button>
 
+        {/* 搜索按钮 */}
+        <button
+          onClick={() => setIsSearchModalOpen(true)}
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200 dark:border-gray-700"
+          aria-label="搜索"
+        >
+          <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+
         {/* 管理页面按钮 - 仅在用户已登录时显示 */}
         {isAuthenticated && (
           <button
@@ -345,6 +358,9 @@ export default function Home() {
           </button>
         )}
       </div>
+
+      {/* 搜索Modal */}
+      <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
     </div>
   );
 }
