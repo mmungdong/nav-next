@@ -72,7 +72,7 @@ export default function Home() {
       </button>
 
       {/* 左侧分类导航 */}
-      <div className={`fixed lg:relative lg:block z-10 w-64 bg-gradient-to-b from-white to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-xl h-full top-0 overflow-y-auto transition-all duration-300 ease-in-out transform ${isNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} lg:shadow-none`}>
+      <div className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-gradient-to-b from-white to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-xl h-screen overflow-y-auto transition-all duration-300 ease-in-out transform ${isNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} lg:shadow-none`}>
         <div className="p-5">
           {/* Logo 区域 */}
           <div className="flex items-center mb-6 pt-2">
