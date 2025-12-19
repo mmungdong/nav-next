@@ -60,7 +60,7 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
   // 返回模拟数据或从本地文件加载数据
   try {
     // 尝试从本地数据文件加载
-    const response = await fetch('/data/db.json');
+    const response = await fetch('/data/simple_db.json');
     if (response.ok) {
       const rawData = await response.json();
       // 转换数据结构

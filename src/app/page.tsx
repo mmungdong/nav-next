@@ -3,16 +3,30 @@
 import { useEffect, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from '@/components/DefaultIcon';
-import UnifiedLayout from '@/components/UnifiedLayout';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>('');
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // 过滤分类和网站
+  const filteredCategories = categories.filter(category => {
+    // 检查分类标题是否匹配搜索查询
+    if (category.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return true;
+    }
+
+    // 检查分类下的网站是否匹配搜索查询
+    return category.nav.some(website =>
+      website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      website.desc.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   if (loading) {
     return (
@@ -23,15 +37,6 @@ export default function Home() {
       </div>
     );
   }
-
-  // 获取第一个分类（假设只有一个分类）
-  const category = categories.length > 0 ? categories[0] : null;
-
-  // 过滤网站
-  const filteredWebsites = category?.nav.filter(website =>
-    website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    website.desc.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
@@ -50,7 +55,7 @@ export default function Home() {
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
-              <span className="mr-2 text-xl">{category?.icon || '🌐'}</span>
+              <span className="mr-2 text-xl">🌐</span>
               发现导航
             </h1>
             <button
@@ -68,7 +73,7 @@ export default function Home() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="搜索网站..."
+                placeholder="搜索网站或分类..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -84,22 +89,46 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 分类信息 */}
-          {category && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
-                <span className="mr-2">{category.icon}</span>
-                {category.title}
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                共 {category.nav.length} 个网站
-              </p>
-            </div>
-          )}
+          {/* 分类导航列表 */}
+          <nav className="mb-4">
+            <ul className="space-y-1">
+              {filteredCategories.map((category) => (
+                <li key={category.id}>
+                  <a
+                    href={`#${category.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsMenuOpen(false);
+                      const element = document.getElementById(category.id.toString());
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                        setActiveCategory(category.id.toString());
+                      }
+                    }}
+                    className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
+                      activeCategory === category.id.toString()
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="mr-3 text-lg">{category.icon || '📂'}</span>
+                    <span className="truncate">{category.title}</span>
+                    {activeCategory === category.id.toString() && (
+                      <span className="ml-auto">
+                        <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-          {/* 网站统计 */}
+          {/* 底部信息 */}
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            搜索结果: {filteredWebsites.length} 个网站
+            共 {filteredCategories.length} 个分类
           </div>
         </div>
       </div>
@@ -115,7 +144,7 @@ export default function Home() {
       {/* 主内容区 */}
       <div className="flex-1 lg:ml-64">
         <div className="p-4 lg:p-6">
-          {!category ? (
+          {filteredCategories.length === 0 ? (
             <div className="text-center py-12">
               <svg
                 className="mx-auto h-12 w-12 text-gray-400"
@@ -126,77 +155,73 @@ export default function Home() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">暂无数据</h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">当前没有可用的网站分类。</p>
+              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">未找到结果</h3>
+              <p className="mt-1 text-gray-500 dark:text-gray-400">没有找到与 "{searchQuery}" 相关的分类或网站。</p>
             </div>
           ) : (
-            <div>
-              {filteredWebsites.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">未找到结果</h3>
-                  <p className="mt-1 text-gray-500 dark:text-gray-400">没有找到与 "{searchQuery}" 相关的网站。</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {filteredWebsites.map((website) => (
-                    <a
-                      key={website.id}
-                      href={website.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <div className="bg-white dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full">
-                        <div className="flex items-start">
-                          <>
-                            {website.icon && !isIconUrlFailed(website.icon) ? (
-                              <img
-                                src={website.icon}
-                                alt={website.name}
-                                className="w-10 h-10 rounded-lg object-cover mr-3"
-                                onError={(e) => {
-                                  // 如果图标加载失败，标记为失败并显示默认图标
-                                  markIconUrlAsFailed(website.icon);
-                                  // 隐藏失败的图标
-                                  e.currentTarget.style.display = 'none';
-                                  // 显示默认图标
-                                  const defaultIconElement = e.currentTarget.nextElementSibling as HTMLElement;
-                                  if (defaultIconElement) {
-                                    defaultIconElement.style.display = 'flex';
-                                  }
-                                }}
-                              />
-                            ) : null}
-                            <div
-                              className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
-                              style={{ display: (website.icon && !isIconUrlFailed(website.icon)) ? 'none' : 'flex' }}
-                            >
-                              <DefaultIcon />
+            <div className="space-y-8">
+              {filteredCategories.map((category) => (
+                <div key={category.id} id={category.id.toString()} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+                  <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                      <span className="mr-2 text-2xl">{category.icon || '📂'}</span>
+                      {category.title}
+                    </h2>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {category.nav.map((website) => (
+                        <a
+                          key={website.id}
+                          href={website.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block group"
+                        >
+                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full">
+                            <div className="flex items-start">
+                              <>
+                                {website.icon && !isIconUrlFailed(website.icon) ? (
+                                  <img
+                                    src={website.icon}
+                                    alt={website.name}
+                                    className="w-10 h-10 rounded-lg object-cover mr-3"
+                                    onError={(e) => {
+                                      // 如果图标加载失败，标记为失败并显示默认图标
+                                      markIconUrlAsFailed(website.icon);
+                                      // 隐藏失败的图标
+                                      e.currentTarget.style.display = 'none';
+                                      // 显示默认图标
+                                      const defaultIconElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                      if (defaultIconElement) {
+                                        defaultIconElement.style.display = 'flex';
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                <div
+                                  className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
+                                  style={{ display: (website.icon && !isIconUrlFailed(website.icon)) ? 'none' : 'flex' }}
+                                >
+                                  <DefaultIcon />
+                                </div>
+                              </>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                  {website.name}
+                                </h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
+                                  {website.desc}
+                                </p>
+                              </div>
                             </div>
-                          </>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                              {website.name}
-                            </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
-                              {website.desc}
-                            </p>
                           </div>
-                        </div>
-                      </div>
-                    </a>
-                  ))}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>
