@@ -24,19 +24,24 @@ export default function Home() {
         requestAnimationFrame(() => {
           if (categories.length === 0) return;
 
-          const scrollPosition = window.scrollY + 100; // 添加偏移量，使切换更早发生
+          const scrollPosition = window.scrollY + 200; // 添加偏移量，使切换更早发生
           let currentCategoryId = '';
 
-          // 从下往上遍历分类，找到第一个进入视窗的分类
-          for (let i = categories.length - 1; i >= 0; i--) {
+          // 从上往下遍历分类，找到第一个即将进入视窗或已经在视窗中的分类
+          for (let i = 0; i < categories.length; i++) {
             const category = categories[i];
             const element = document.getElementById(category.id.toString());
 
             if (element) {
               const elementTop = element.offsetTop;
 
+              // 如果当前分类顶部进入视窗或接近视窗，则标记为当前分类
               if (elementTop <= scrollPosition) {
                 currentCategoryId = category.id.toString();
+              }
+
+              // 如果当前分类底部已经离开视窗，则跳出循环
+              if (elementTop > scrollPosition + 500) {
                 break;
               }
             }
@@ -74,7 +79,7 @@ export default function Home() {
         // 平滑滚动到选中项，使其在菜单中可见
         activeElement.scrollIntoView({
           behavior: 'smooth',
-          block: 'center',
+          block: 'nearest',
           inline: 'nearest'
         });
       }
@@ -118,7 +123,7 @@ export default function Home() {
       </button>
 
       {/* 左侧分类菜单 */}
-      <div ref={menuRef} className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}>
+      <div ref={menuRef} className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}>
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
