@@ -200,7 +200,7 @@ export default function Home() {
                         : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
                   >
-                    <span className="mr-3 text-lg">{category.icon || '📂'}</span>
+                    <span className="mr-3 text-xl">{category.icon || '📂'}</span>
                     <span className="truncate">{category.title}</span>
                     {activeCategory === category.id.toString() && (
                       <span className="ml-auto">
