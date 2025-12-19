@@ -89,41 +89,32 @@ export default function WebManagementPage() {
                 {category.nav.map((website) => (
                   <div key={website.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col h-full transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start">
-                      {website.icon && !isIconUrlFailed(website.icon) ? (
-                        <img
-                          src={website.icon}
-                          alt={website.name}
-                          className="w-10 h-10 rounded-lg object-cover mr-3"
-                          onError={(e) => {
-                            // 如果图标加载失败，标记为失败并显示默认图标
-                            markIconUrlAsFailed(website.icon);
-                            // 移除原来的图片元素
-                            e.currentTarget.remove();
-                            // 创建默认图标容器
-                            const defaultIconContainer = document.createElement('div');
-                            defaultIconContainer.className = 'w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3';
-                            defaultIconContainer.innerHTML = `
-                              <svg width="24" height="24" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                  <linearGradient id="defaultIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#4F46E5" />
-                                    <stop offset="100%" stopColor="#7C3AED" />
-                                  </linearGradient>
-                                </defs>
-                                <rect width="40" height="40" rx="10" fill="url(#defaultIconGradient)" />
-                                <circle cx="20" cy="18" r="5" fill="white" opacity="0.9" />
-                                <rect x="12" y="25" width="16" height="3" rx="1.5" fill="white" opacity="0.9" />
-                              </svg>
-                            `;
-                            // 插入到原来的位置
-                            e.currentTarget.parentNode?.insertBefore(defaultIconContainer, e.currentTarget.nextSibling);
-                          }}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+                      <>
+                        {website.icon && !isIconUrlFailed(website.icon) ? (
+                          <img
+                            src={website.icon}
+                            alt={website.name}
+                            className="w-10 h-10 rounded-lg object-cover mr-3"
+                            onError={(e) => {
+                              // 如果图标加载失败，标记为失败并显示默认图标
+                              markIconUrlAsFailed(website.icon);
+                              // 隐藏失败的图标
+                              e.currentTarget.style.display = 'none';
+                              // 显示默认图标
+                              const defaultIconElement = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (defaultIconElement) {
+                                defaultIconElement.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
+                          style={{ display: (website.icon && !isIconUrlFailed(website.icon)) ? 'none' : 'flex' }}
+                        >
                           <DefaultIcon />
                         </div>
-                      )}
+                      </>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {website.name}
