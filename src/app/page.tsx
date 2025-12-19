@@ -142,8 +142,8 @@ export default function Home() {
       )}
 
       {/* 主内容区 */}
-      <div className="flex-1 lg:ml-64">
-        <div className="p-4 lg:p-6">
+      <div className="flex-1">
+        <div className="p-4 lg:p-6 lg:px-20 max-w-[2000px] mx-auto">
           {filteredCategories.length === 0 ? (
             <div className="text-center py-12">
               <svg
@@ -169,7 +169,7 @@ export default function Home() {
                     </h2>
                   </div>
                   <div className="p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
                       {category.nav.map((website) => (
                         <a
                           key={website.id}

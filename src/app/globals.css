@@ -25,7 +25,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 自定义滚动条样式 */
+/* 自定义滚动条样式 - 仅纵向滚动条 */
+.custom-scrollbar {
+  overflow-x: hidden; /* 隐藏横向滚动条 */
+  overflow-y: auto;    /* 显示纵向滚动条 */
+  scrollbar-width: thin; /* Firefox 支持 */
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent; /* Firefox 支持 */
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: rgba(75, 85, 99, 0.5) transparent; /* Firefox 支持 */
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -37,6 +48,7 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(156, 163, 175, 0.5);
   border-radius: 3px;
+  border: none;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
