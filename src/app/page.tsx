@@ -89,7 +89,7 @@ export default function Home() {
                   </h2>
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {category.nav.map((website) => (
                       <a
                         key={website.id}
@@ -98,7 +98,7 @@ export default function Home() {
                         rel="noopener noreferrer"
                         className="block group"
                       >
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-colors duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500">
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full">
                           <div className="flex items-start">
                             {website.icon && !isIconUrlFailed(website.icon) ? (
                               <img
@@ -136,7 +136,7 @@ export default function Home() {
                               <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
                                 {website.name}
                               </h3>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
                                 {website.desc}
                               </p>
                             </div>

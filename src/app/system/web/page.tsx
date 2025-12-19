@@ -85,9 +85,9 @@ export default function WebManagementPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {category.nav.map((website) => (
-                  <div key={website.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                  <div key={website.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col h-full transition-all duration-200 hover:shadow-md">
                     <div className="flex items-start">
                       {website.icon && !isIconUrlFailed(website.icon) ? (
                         <img
@@ -125,7 +125,7 @@ export default function WebManagementPage() {
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {website.name}
                         </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
                           {website.desc}
                         </p>
                       </div>
