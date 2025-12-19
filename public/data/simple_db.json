@@ -1,0 +1,64 @@
+[
+  {
+    "id": 1,
+    "title": "常用站点",
+    "icon": "📂",
+    "nav": [
+      {
+        "id": 1013,
+        "name": "滴答清单",
+        "desc": "滴答清单，一个帮你高效完成任务和规划时间的应用，是一款拥有跨设备云同步、周期提醒、清单管理、清晰分类、协作和集成日历的应用，你可以在Web、Android、iPhone等设备上使用它。",
+        "rate": 5,
+        "icon": "https://cncdn.dida365.com/static/img/favicon.ico",
+        "url": "https://dida365.com/webapp/#q/today/tasks"
+      },
+      {
+        "id": 1058,
+        "name": "flomo - 卡片笔记",
+        "desc": "",
+        "rate": 5,
+        "top": true,
+        "icon": "",
+        "url": "https://v.flomoapp.com/mine",
+        "topTypes": [
+          1
+        ]
+      },
+      {
+        "id": 844,
+        "name": "微信读书",
+        "desc": "微信读书提供海量正版书籍、小说、漫画、公众号、听书，多设备同步实现跨屏阅读。与微信好友一起发现更多精品好书，随时交流感想，让阅读不再孤独。",
+        "rate": 5,
+        "icon": "https://rescdn.qqmail.com/node/wr/wrpage/style/images/independent/favicon/favicon_16h.png",
+        "url": "https://weread.qq.com",
+        "top": true,
+        "topTypes": [
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "AI工具",
+    "icon": "🤖",
+    "nav": [
+      {
+        "id": 1076,
+        "name": "NotebookLM",
+        "desc": "",
+        "rate": 5,
+        "icon": "https://notebooklm.google.com/favicon.ico",
+        "url": "https://notebooklm.google.com"
+      },
+      {
+        "id": 1045,
+        "name": "智谱清言",
+        "desc": "中国版对话语言模型，与GLM大模型进行对话。",
+        "rate": 5,
+        "icon": "https://chatglm.cn/img/icons/favicon.svg",
+        "url": "https://chatglm.cn/main/alltoolsdetail?lang=zh"
+      }
+    ]
+  }
+]
