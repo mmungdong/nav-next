@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
 
-export default function Home() {
+export default function SidePage() {
   const { categories, loading, fetchCategories } = useNavStore();
   const [searchQuery, setSearchQuery] = useState('');
 
