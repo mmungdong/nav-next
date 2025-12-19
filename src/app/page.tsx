@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from '@/components/DefaultIcon';
 
@@ -9,10 +9,77 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('');
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // 监听页面的滚动事件，自动更新左侧菜单的选中项
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (categories.length === 0) return;
+
+          const scrollPosition = window.scrollY + 100; // 添加偏移量，使切换更早发生
+          let currentCategoryId = '';
+
+          // 从下往上遍历分类，找到第一个进入视窗的分类
+          for (let i = categories.length - 1; i >= 0; i--) {
+            const category = categories[i];
+            const element = document.getElementById(category.id.toString());
+
+            if (element) {
+              const elementTop = element.offsetTop;
+
+              if (elementTop <= scrollPosition) {
+                currentCategoryId = category.id.toString();
+                break;
+              }
+            }
+          }
+
+          if (currentCategoryId !== activeCategory) {
+            setActiveCategory(currentCategoryId);
+          }
+
+          ticking = false;
+        });
+
+        ticking = true;
+      }
+    };
+
+    // 延迟绑定滚动事件，确保DOM已经渲染完成
+    const timer = setTimeout(() => {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      // 初始化时也触发一次，确保初始状态正确
+      handleScroll();
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [categories, activeCategory]);
+
+  // 当选中的分类改变时，自动滚动菜单到选中项
+  useEffect(() => {
+    if (activeCategory && menuRef.current) {
+      const activeElement = menuRef.current.querySelector(`[href="#${activeCategory}"]`);
+      if (activeElement) {
+        // 平滑滚动到选中项，使其在菜单中可见
+        activeElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }
+  }, [activeCategory]);
 
   // 过滤分类和网站
   const filteredCategories = categories.filter(category => {
@@ -51,7 +118,7 @@ export default function Home() {
       </button>
 
       {/* 左侧分类菜单 */}
-      <div className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}>
+      <div ref={menuRef} className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}>
         <div className="p-4">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
