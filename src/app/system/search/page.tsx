@@ -240,7 +240,7 @@ function SearchConfigModal({ config, onSave, onClose }: { config: any; onSave: (
 
           <div className="mb-4">
             <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              URL (搜索链接，使用 {query} 作为占位符)
+              URL (搜索链接，使用 {'{query}'} 作为占位符)
             </label>
             <input
               type="text"
@@ -252,7 +252,7 @@ function SearchConfigModal({ config, onSave, onClose }: { config: any; onSave: (
               required
             />
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              示例: https://www.google.com/search?q={query}
+              示例: https://www.google.com/search?q={'{query}'}
             </p>
           </div>
 

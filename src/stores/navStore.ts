@@ -17,10 +17,10 @@ const transformCategories = (rawData: any[]): ICategory[] => {
 
     // 遍历第二层分类
     if (category.nav && Array.isArray(category.nav)) {
-      category.nav.forEach(subCategory => {
+      category.nav.forEach((subCategory: any) => {
         // 遍历第三层分类
         if (subCategory.nav && Array.isArray(subCategory.nav)) {
-          subCategory.nav.forEach(subSubCategory => {
+          subCategory.nav.forEach((subSubCategory: any) => {
             // 获取第四层网站数据
             if (subSubCategory.nav && Array.isArray(subSubCategory.nav)) {
               subSubCategory.nav.forEach((website: any) => {

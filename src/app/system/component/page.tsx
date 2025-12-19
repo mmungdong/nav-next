@@ -138,7 +138,7 @@ export default function ComponentManagementPage() {
                   <div className="text-sm text-gray-900 dark:text-white">
                     {Object.keys(component.config).map(key => (
                       <div key={key} className="text-xs">
-                        <span className="font-medium">{key}:</span> {String(component.config[key])}
+                        <span className="font-medium">{key}:</span> {String((component.config as Record<string, any>)[key])}
                       </div>
                     ))}
                   </div>
