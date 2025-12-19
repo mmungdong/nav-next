@@ -97,7 +97,9 @@ export default function WebManagementPage() {
                           onError={(e) => {
                             // 如果图标加载失败，标记为失败并显示默认图标
                             markIconUrlAsFailed(website.icon);
-                            e.currentTarget.style.display = 'none';
+                            // 移除原来的图片元素
+                            e.currentTarget.remove();
+                            // 创建默认图标容器
                             const defaultIconContainer = document.createElement('div');
                             defaultIconContainer.className = 'w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3';
                             defaultIconContainer.innerHTML = `
@@ -113,7 +115,8 @@ export default function WebManagementPage() {
                                 <rect x="12" y="25" width="16" height="3" rx="1.5" fill="white" opacity="0.9" />
                               </svg>
                             `;
-                            e.currentTarget.parentNode?.insertBefore(defaultIconContainer, e.currentTarget);
+                            // 插入到原来的位置
+                            e.currentTarget.parentNode?.insertBefore(defaultIconContainer, e.currentTarget.nextSibling);
                           }}
                         />
                       ) : (
