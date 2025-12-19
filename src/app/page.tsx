@@ -137,7 +137,7 @@ export default function Home() {
 
       {/* 左侧分类菜单 */}
       <div ref={menuRef} className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}>
-        <div className="p-4">
+        <div className="p-5">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
               <span className="mr-2 text-xl">🌐</span>
@@ -194,7 +194,7 @@ export default function Home() {
                         element.scrollIntoView({ behavior: 'smooth' });
                       }
                     }}
-                    className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
+                    className={`flex items-center px-4 py-2.5 text-sm rounded-lg transition-colors ${
                       activeCategory === category.id.toString()
                         ? 'bg-blue-500 text-white'
                         : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
