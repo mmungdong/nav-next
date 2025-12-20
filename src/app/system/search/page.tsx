@@ -12,7 +12,7 @@ interface SearchConfig {
 }
 
 export default function SearchManagementPage() {
-  const [searchConfigs, setSearchConfigs] = useState([
+  const [searchConfigs, setSearchConfigs] = useState<SearchConfig[]>([
     {
       id: 1,
       name: '百度',
@@ -83,10 +83,17 @@ export default function SearchManagementPage() {
       );
     } else {
       // 添加配置
-      const newConfig = {
-        ...configData,
+      const newConfig: SearchConfig = {
         id: Math.max(...searchConfigs.map((c) => c.id), 0) + 1,
-        sort: searchConfigs.length + 1,
+        name: configData.name || '',
+        url: configData.url || '',
+        icon: configData.icon || '🔍',
+        sort:
+          configData.sort !== undefined
+            ? configData.sort
+            : searchConfigs.length + 1,
+        isActive:
+          configData.isActive !== undefined ? configData.isActive : true,
       };
       setSearchConfigs([...searchConfigs, newConfig]);
     }

@@ -15,7 +15,7 @@ interface ComponentItem {
 }
 
 export default function ComponentManagementPage() {
-  const [components, setComponents] = useState([
+  const [components, setComponents] = useState<ComponentItem[]>([
     {
       id: 1,
       name: '日历',
@@ -47,7 +47,8 @@ export default function ComponentManagementPage() {
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<ComponentItem | null>(null);
+  const [editingComponent, setEditingComponent] =
+    useState<ComponentItem | null>(null);
 
   // 过滤组件
   const filteredComponents = components.filter(
@@ -94,9 +95,15 @@ export default function ComponentManagementPage() {
       );
     } else {
       // 添加组件
-      const newComponent = {
-        ...componentData,
+      const newComponent: ComponentItem = {
         id: Math.max(...components.map((c) => c.id), 0) + 1,
+        name: componentData.name || '',
+        type: componentData.type || 'calendar',
+        isEnabled:
+          componentData.isEnabled !== undefined
+            ? componentData.isEnabled
+            : true,
+        config: componentData.config || {},
       };
       setComponents([...components, newComponent]);
     }
@@ -246,6 +253,10 @@ export default function ComponentManagementPage() {
   );
 }
 
+interface ComponentFormData extends Partial<ComponentItem> {
+  config: ComponentConfig;
+}
+
 function ComponentModal({
   component,
   onSave,
@@ -255,7 +266,7 @@ function ComponentModal({
   onSave: (component: Partial<ComponentItem>) => void;
   onClose: () => void;
 }) {
-  const [formData, setFormData] = useState(
+  const [formData, setFormData] = useState<ComponentFormData>(
     component || {
       name: '',
       type: 'calendar',
@@ -302,7 +313,7 @@ function ComponentModal({
               主题
             </label>
             <select
-              value={formData.config.theme || 'light'}
+              value={(formData.config as { theme?: string }).theme || 'light'}
               onChange={(e) => handleConfigChange('theme', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
@@ -319,7 +330,9 @@ function ComponentModal({
             </label>
             <input
               type="date"
-              value={formData.config.targetDate || ''}
+              value={
+                (formData.config as { targetDate?: string }).targetDate || ''
+              }
               onChange={(e) => handleConfigChange('targetDate', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
@@ -332,7 +345,10 @@ function ComponentModal({
               新闻源
             </label>
             <select
-              value={formData.config.source || 'top-headlines'}
+              value={
+                (formData.config as { source?: string }).source ||
+                'top-headlines'
+              }
               onChange={(e) => handleConfigChange('source', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
@@ -350,7 +366,7 @@ function ComponentModal({
             </label>
             <input
               type="text"
-              value={formData.config.location || ''}
+              value={(formData.config as { location?: string }).location || ''}
               onChange={(e) => handleConfigChange('location', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               placeholder="例如: 北京"

@@ -13,7 +13,7 @@ interface ConfigItem {
 }
 
 export default function ConfigManagementPage() {
-  const [configs, setConfigs] = useState([
+  const [configs, setConfigs] = useState<ConfigItem[]>([
     {
       id: 1,
       key: 'site_title',
@@ -94,9 +94,14 @@ export default function ConfigManagementPage() {
       );
     } else {
       // 添加配置
-      const newConfig = {
-        ...configData,
+      const newConfig: ConfigItem = {
         id: Math.max(...configs.map((c) => c.id), 0) + 1,
+        key: configData.key || '',
+        name: configData.name || '',
+        value: configData.value || '',
+        type: configData.type || 'string',
+        description: configData.description || '',
+        options: configData.options || undefined,
       };
       setConfigs([...configs, newConfig]);
     }
@@ -255,6 +260,15 @@ export default function ConfigManagementPage() {
   );
 }
 
+interface ConfigFormData {
+  key?: string;
+  name?: string;
+  value?: string;
+  type?: 'string' | 'text' | 'boolean' | 'number' | 'select';
+  description?: string;
+  options: string[];
+}
+
 function ConfigModal({
   config,
   onSave,
@@ -264,15 +278,24 @@ function ConfigModal({
   onSave: (config: Partial<ConfigItem>) => void;
   onClose: () => void;
 }) {
-  const [formData, setFormData] = useState(
-    config || {
-      key: '',
-      name: '',
-      value: '',
-      type: 'string',
-      description: '',
-      options: [],
-    }
+  const [formData, setFormData] = useState<ConfigFormData>(
+    config
+      ? {
+          key: config.key,
+          name: config.name,
+          value: config.value,
+          type: config.type,
+          description: config.description,
+          options: config.options || [],
+        }
+      : {
+          key: '',
+          name: '',
+          value: '',
+          type: 'string',
+          description: '',
+          options: [],
+        }
   );
 
   const handleChange = (
@@ -285,7 +308,7 @@ function ConfigModal({
     setFormData({
       ...formData,
       [name]: value,
-    });
+    } as ConfigFormData);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -411,12 +434,12 @@ function ConfigModal({
                 type="text"
                 id="options"
                 name="options"
-                value={formData.options?.join(', ') || ''}
+                value={formData.options.join(', ') || ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     options: e.target.value.split(',').map((opt) => opt.trim()),
-                  })
+                  } as ConfigFormData)
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder="选项1, 选项2, 选项3"

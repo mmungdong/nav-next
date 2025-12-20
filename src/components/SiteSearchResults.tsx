@@ -74,13 +74,21 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
     onClose();
   };
 
+  // 阻止滚动事件冒泡到模态框
+  const handleWheel = (e: React.WheelEvent) => {
+    e.stopPropagation();
+  };
+
   if (!query.trim()) {
     return null;
   }
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/30 dark:border-gray-700/50 overflow-hidden z-50">
-      <div className="max-h-96 overflow-y-auto custom-scrollbar">
+    <div
+      className="absolute top-full left-0 right-0 mt-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/30 dark:border-gray-700/50 overflow-hidden z-50"
+      onWheel={handleWheel}
+    >
+      <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
         {noResults ? (
           <div className="p-6 text-center">
             <div className="text-gray-400 dark:text-gray-500 mb-2">
@@ -107,7 +115,7 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
           </div>
         ) : (
           <>
-            <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+            <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl z-10">
               <h3 className="font-medium text-gray-900 dark:text-white">
                 站内搜索结果 (
                 {filteredResults.reduce(

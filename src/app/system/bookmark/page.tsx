@@ -87,15 +87,18 @@ export default function BookmarkManagementPage() {
       );
     } else {
       // 添加书签
-      const newBookmark = {
-        ...bookmarkData,
+      const newBookmark: Bookmark = {
         id: Math.max(...bookmarks.map((b) => b.id), 0) + 1,
+        name: bookmarkData.name || '',
+        url: bookmarkData.url || '',
+        folder: bookmarkData.folder || '',
+        tags: bookmarkData.tags || [],
         createdAt: new Date().toISOString().split('T')[0],
       };
       setBookmarks([...bookmarks, newBookmark]);
 
       // 如果是新文件夹，添加到文件夹列表
-      if (!folders.includes(bookmarkData.folder)) {
+      if (bookmarkData.folder && !folders.includes(bookmarkData.folder)) {
         setFolders([...folders, bookmarkData.folder]);
       }
     }
@@ -300,6 +303,11 @@ export default function BookmarkManagementPage() {
   );
 }
 
+interface BookmarkFormData extends Partial<Bookmark> {
+  newTag?: string;
+  newFolder?: string;
+}
+
 function BookmarkModal({
   bookmark,
   folders,
@@ -311,7 +319,7 @@ function BookmarkModal({
   onSave: (bookmark: Partial<Bookmark>) => void;
   onClose: () => void;
 }) {
-  const [formData, setFormData] = useState(
+  const [formData, setFormData] = useState<BookmarkFormData>(
     bookmark || {
       name: '',
       url: '',
@@ -329,35 +337,38 @@ function BookmarkModal({
     setFormData({
       ...formData,
       [name]: value,
-    });
+    } as BookmarkFormData);
   };
 
   const handleAddTag = () => {
     if (
+      formData.newTag &&
       formData.newTag.trim() &&
+      formData.tags &&
       !formData.tags.includes(formData.newTag.trim())
     ) {
       setFormData({
         ...formData,
         tags: [...formData.tags, formData.newTag.trim()],
         newTag: '',
-      });
+      } as BookmarkFormData);
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
     setFormData({
       ...formData,
-      tags: formData.tags.filter((tag: string) => tag !== tagToRemove),
-    });
+      tags: formData.tags?.filter((tag: string) => tag !== tagToRemove),
+    } as BookmarkFormData);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      tags: formData.tags,
-    });
+    // 从formData中移除newTag和newFolder属性，因为它们不在Bookmark接口中
+    const bookmarkData = { ...formData };
+    delete bookmarkData.newTag;
+    delete bookmarkData.newFolder;
+    onSave(bookmarkData);
   };
 
   return (
@@ -441,7 +452,7 @@ function BookmarkModal({
               标签
             </label>
             <div className="flex flex-wrap gap-1 mb-2">
-              {formData.tags.map((tag: string, index: number) => (
+              {(formData.tags || []).map((tag: string, index: number) => (
                 <span
                   key={index}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"

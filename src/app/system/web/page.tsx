@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
-import DefaultIcon, {
-  isIconUrlFailed,
-} from '@/components/DefaultIcon';
+import DefaultIcon, { isIconUrlFailed } from '@/components/DefaultIcon';
 import Image from 'next/image';
 
 export default function WebManagementPage() {

@@ -77,20 +77,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
       }
     };
 
-    // 阻止背景页面滚动
-    const preventBackgroundScroll = (e: Event) => {
-      if (isOpen) {
-        e.preventDefault();
-      }
-    };
-
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
       // 阻止背景滚动
       document.body.style.overflow = 'hidden';
-      document.addEventListener('wheel', preventBackgroundScroll, {
-        passive: false,
-      });
       // 自动聚焦到搜索框
       setTimeout(() => {
         if (searchInputRef.current) {
@@ -103,7 +93,6 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
       document.removeEventListener('keydown', handleKeyDown);
       // 恢复背景滚动
       document.body.style.overflow = '';
-      document.removeEventListener('wheel', preventBackgroundScroll);
     };
   }, [isOpen, onClose]);
 

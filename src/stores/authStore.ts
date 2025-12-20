@@ -24,8 +24,8 @@ interface User {
 interface GithubUser {
   id: number;
   login: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   avatar_url: string;
 }
 

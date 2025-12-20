@@ -12,7 +12,7 @@ interface Submission {
 }
 
 export default function CollectManagementPage() {
-  const [submissions, setSubmissions] = useState([
+  const [submissions, setSubmissions] = useState<Submission[]>([
     {
       id: 1,
       name: 'GitHub',
@@ -40,7 +40,9 @@ export default function CollectManagementPage() {
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [viewingSubmission, setViewingSubmission] = useState<Submission | null>(null);
+  const [viewingSubmission, setViewingSubmission] = useState<Submission | null>(
+    null
+  );
 
   // 过滤收录提交
   const filteredSubmissions = submissions.filter(

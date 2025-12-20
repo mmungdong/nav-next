@@ -24,7 +24,7 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
       // db.json现在已经是两层结构，直接返回
       return rawData.map((category: ICategory) => ({
         id: category.id,
-        title: category.title || category.name || '未知分类',
+        title: category.title || '未知分类',
         icon: category.icon || '',
         nav: category.nav || [],
       }));

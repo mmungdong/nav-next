@@ -13,7 +13,7 @@ interface Tag {
 }
 
 export default function TagManagementPage() {
-  const [tags, setTags] = useState([
+  const [tags, setTags] = useState<Tag[]>([
     {
       id: 1,
       name: '工具',
@@ -79,10 +79,14 @@ export default function TagManagementPage() {
       );
     } else {
       // 添加标签
-      const newTag = {
-        ...tagData,
+      const newTag: Tag = {
         id: Math.max(...tags.map((t) => t.id), 0) + 1,
-        sort: tags.length + 1,
+        name: tagData.name || '',
+        color: tagData.color || '#108ee9',
+        desc: tagData.desc || '',
+        isInner: tagData.isInner !== undefined ? tagData.isInner : false,
+        noOpen: tagData.noOpen !== undefined ? tagData.noOpen : false,
+        sort: tagData.sort !== undefined ? tagData.sort : tags.length + 1,
       };
       setTags([...tags, newTag]);
     }
