@@ -25,7 +25,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 844,
@@ -37,7 +39,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [2]
+        "topTypes": [
+          2
+        ]
       },
       {
         "id": 845,
@@ -93,18 +97,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
-      },
-      {
-        "id": 1019,
-        "name": "语雀",
-        "desc": "It's the action, not the th...",
-        "url": "https://www.yuque.com/mungdong",
-        "icon": "https://mdn.alipayobjects.com/huamei_0prmtq/afts/img/A*sRUdR543RjcAAAAAAAAAAAAADvuFAQ/original",
-        "tags": [],
-        "rate": 5,
-        "top": false,
-        "ownVisible": false
+        "topTypes": [
+          1
+        ]
       }
     ]
   },
@@ -123,7 +118,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1075,
@@ -136,7 +133,20 @@
         "top": true,
         "ownVisible": false,
         "index": null,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
+      },
+      {
+        "id": 1019,
+        "name": "语雀",
+        "desc": "It's the action, not the th...",
+        "url": "https://www.yuque.com/mungdong",
+        "icon": "https://mdn.alipayobjects.com/huamei_0prmtq/afts/img/A*sRUdR543RjcAAAAAAAAAAAAADvuFAQ/original",
+        "tags": [],
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
       }
     ]
   },
@@ -155,7 +165,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1071,
