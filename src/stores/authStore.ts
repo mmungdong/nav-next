@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { verifyGithubToken } from '@/lib/githubApi';
 
 interface Permission {
   id: string;
@@ -20,9 +21,20 @@ interface User {
   avatar: string;
 }
 
+interface GithubUser {
+  id: number;
+  login: string;
+  name: string;
+  email: string;
+  avatar_url: string;
+}
+
 interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
+  githubToken: string | null;
+  githubUser: GithubUser | null;
+  isGithubAuth: boolean;
   roles: Role[];
   permissions: Permission[];
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
@@ -33,6 +45,9 @@ interface AuthState {
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   getUserPermissions: () => string[];
+  validateGithubToken: (token: string) => Promise<{ valid: boolean; message?: string }>;
+  setGithubToken: (token: string) => void;
+  clearGithubToken: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -127,10 +142,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   logout: () => {
-    set({ isAuthenticated: false, user: null });
+    set({ isAuthenticated: false, user: null, githubToken: null, githubUser: null, isGithubAuth: false });
     // 清除localStorage中的认证信息
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('githubToken');
+    localStorage.removeItem('githubUser');
   },
   checkAuth: async () => {
     try {
@@ -141,12 +158,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (token && userStr) {
         const user = JSON.parse(userStr) as User;
         set({ isAuthenticated: true, user });
+        return;
+      }
+
+      // 检查GitHub Token
+      const githubToken = localStorage.getItem('githubToken');
+      const githubUserStr = localStorage.getItem('githubUser');
+
+      if (githubToken && githubUserStr) {
+        const githubUser = JSON.parse(githubUserStr) as GithubUser;
+        set({
+          isAuthenticated: true,
+          isGithubAuth: true,
+          githubToken,
+          githubUser,
+          user: {
+            id: githubUser.id,
+            username: githubUser.login,
+            role: 'admin', // GitHub用户默认为管理员
+            email: githubUser.email || '',
+            avatar: githubUser.avatar_url
+          }
+        });
       }
     } catch (error) {
       // 如果解析失败，清除认证信息
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      set({ isAuthenticated: false, user: null });
+      localStorage.removeItem('githubToken');
+      localStorage.removeItem('githubUser');
+      set({ isAuthenticated: false, user: null, githubToken: null, githubUser: null, isGithubAuth: false });
     }
   },
   register: async (username, email, password) => {
@@ -216,5 +257,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const role = state.roles.find(r => r.id === state.user?.role);
     return role ? role.permissions : [];
+  },
+  validateGithubToken: async (token: string) => {
+    try {
+      // 默认仓库URL
+      const repoUrl = 'https://github.com/mmungdong/nav-next';
+
+      const result = await verifyGithubToken(token, repoUrl);
+
+      if (result.valid && result.user) {
+        // 保存GitHub Token和用户信息到localStorage
+        localStorage.setItem('githubToken', token);
+        localStorage.setItem('githubUser', JSON.stringify(result.user));
+
+        // 更新状态
+        set({
+          isAuthenticated: true,
+          isGithubAuth: true,
+          githubToken: token,
+          githubUser: result.user,
+          user: {
+            id: result.user.id,
+            username: result.user.login,
+            role: 'admin', // GitHub用户默认为管理员
+            email: result.user.email || '',
+            avatar: result.user.avatar_url
+          }
+        });
+
+        return { valid: true };
+      } else {
+        return { valid: false, message: result.message || 'Token验证失败' };
+      }
+    } catch (error) {
+      console.error('GitHub Token 验证错误:', error);
+      return { valid: false, message: '验证过程中发生错误，请稍后再试' };
+    }
+  },
+  setGithubToken: (token: string) => {
+    set({ githubToken: token });
+  },
+  clearGithubToken: () => {
+    set({ githubToken: null, githubUser: null, isGithubAuth: false });
   }
 }));

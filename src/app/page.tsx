@@ -8,7 +8,7 @@ import SearchModal from '@/components/SearchModal';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, checkAuth } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -18,6 +18,11 @@ export default function Home() {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // 检查认证状态
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   // 监听页面的滚动事件，自动更新左侧菜单的选中项
   useEffect(() => {

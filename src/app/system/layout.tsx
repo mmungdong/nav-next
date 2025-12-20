@@ -10,7 +10,7 @@ export default function SystemLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { isAuthenticated, checkAuth, logout } = useAuthStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +27,11 @@ export default function SystemLayout({
       router.push('/login');
     }
   }, [isAuthenticated, loading, router]);
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   if (loading) {
     return (
@@ -46,7 +51,23 @@ export default function SystemLayout({
         {/* 侧边栏 */}
         <div className="w-64 bg-white dark:bg-gray-800 shadow-md">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">管理系统</h1>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">管理系统</h1>
+                <button
+                  onClick={() => router.push('/')}
+                  className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  返回主页
+                </button>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                退出
+              </button>
+            </div>
           </div>
           <nav className="p-4">
             <ul className="space-y-2">
