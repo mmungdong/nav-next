@@ -243,17 +243,6 @@
         "ownVisible": false
       },
       {
-        "id": 848,
-        "name": "腾讯元宝",
-        "desc": "腾讯元宝是基于腾讯混元大模型的AI应用，可以帮你写作绘画文案翻译编程搜索阅读总结的全能助手",
-        "url": "https://yuanbao.tencent.com",
-        "icon": "https://cdn-bot.hunyuan.tencent.com/logo-v2.png",
-        "tags": [],
-        "rate": 5,
-        "top": false,
-        "ownVisible": false
-      },
-      {
         "id": 850,
         "name": "Claude",
         "desc": "",
