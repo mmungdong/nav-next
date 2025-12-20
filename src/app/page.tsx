@@ -150,7 +150,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
               <span className="mr-2 text-xl">🌐</span>
-              发现导航
+              晨雾漫路
             </h1>
             <button
               onClick={() => setIsMenuOpen(false)}
@@ -160,27 +160,6 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-          </div>
-
-          {/* 搜索框 */}
-          <div className="mb-6">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="搜索网站或分类..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <svg
-                className="absolute right-2 top-2 h-4 w-4 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </div>
           </div>
 
           {/* 分类导航列表 */}
@@ -208,8 +187,26 @@ export default function Home() {
                         ? 'bg-blue-500 text-white'
                         : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
+                    onMouseEnter={(e) => {
+                      // 鼠标悬停时改变图标为📂
+                      const iconElement = e.currentTarget.querySelector('.category-icon');
+                      if (iconElement) {
+                        iconElement.textContent = '📂';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      // 鼠标离开时根据激活状态设置图标
+                      const iconElement = e.currentTarget.querySelector('.category-icon');
+                      if (iconElement) {
+                        if (activeCategory === category.id.toString()) {
+                          iconElement.textContent = '📂';
+                        } else {
+                          iconElement.textContent = '📁';
+                        }
+                      }
+                    }}
                   >
-                    <span className="mr-3 text-xl">{category.icon || '📂'}</span>
+                    <span className="mr-3 text-xl category-icon">{category.icon || (activeCategory === category.id.toString() ? '📂' : '📁')}</span>
                     <span className="truncate">{category.title}</span>
                     {activeCategory === category.id.toString() && (
                       <span className="ml-auto">
@@ -262,7 +259,7 @@ export default function Home() {
                 <div key={category.id} id={category.id.toString()} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
                   <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                      <span className="mr-2 text-2xl">{category.icon || '📂'}</span>
+                      <span className="mr-2 text-2xl">{category.icon || '📁'}</span>
                       {category.title}
                     </h2>
                   </div>
