@@ -9,7 +9,6 @@ interface SidebarProps {
 
 const menuItems = [
   { name: '网站管理', href: '/system/web' },
-  { name: '标签管理', href: '/system/tag' },
   { name: '搜索管理', href: '/system/search' },
   { name: '系统设置', href: '/system/setting' },
   { name: '组件管理', href: '/system/component' },

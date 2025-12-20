@@ -26,12 +26,6 @@ export default function SystemPage() {
       color: 'from-blue-500 to-indigo-600',
     },
     {
-      name: '标签管理',
-      description: '管理网站标签',
-      href: '/system/tag',
-      color: 'from-green-500 to-emerald-600',
-    },
-    {
       name: '搜索管理',
       description: '配置搜索功能',
       href: '/system/search',

@@ -6,8 +6,11 @@ import DefaultIcon, { isIconUrlFailed } from '@/components/DefaultIcon';
 import Image from 'next/image';
 import { ICategory, IWebsite } from '@/types';
 import EditWebsiteModal from '@/components/EditWebsiteModal';
+import EditCategoryModal from '@/components/EditCategoryModal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import MoveWebsiteModal from '@/components/MoveWebsiteModal';
+import CategorySortModal from '@/components/CategorySortModal';
+import WebsiteSortModal from '@/components/WebsiteSortModal';
 import { useAuthStore } from '@/stores/authStore';
 import { updateFileContent, getFileContent } from '@/lib/githubApi';
 
@@ -25,8 +28,14 @@ export default function WebManagementPage() {
     undefined
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ICategory | undefined>(
+    undefined
+  );
+  const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
   const [deletingWebsite, setDeletingWebsite] = useState<IWebsite | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<ICategory | null>(null);
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
   const [movingWebsite, setMovingWebsite] = useState<IWebsite | undefined>(
     undefined
   );
@@ -40,6 +49,9 @@ export default function WebManagementPage() {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
+  const [sortingCategory, setSortingCategory] = useState<ICategory | null>(null);
+  const [isWebsiteSortModalOpen, setIsWebsiteSortModalOpen] = useState(false);
 
   // 消息展示组件
   const MessageDisplay = () => {
@@ -105,9 +117,20 @@ export default function WebManagementPage() {
       // 更新本地状态
       const updatedCategories = categories.map((category) => {
         if (category.id === selectedCategory?.id) {
-          const updatedNav = category.nav.map((w) =>
-            w.id === website.id ? website : w
-          );
+          // 检查是否是编辑现有网站还是添加新网站
+          const existingWebsiteIndex = category.nav.findIndex(w => w.id === website.id);
+
+          let updatedNav;
+          if (existingWebsiteIndex >= 0) {
+            // 编辑现有网站
+            updatedNav = category.nav.map((w, index) =>
+              index === existingWebsiteIndex ? website : w
+            );
+          } else {
+            // 添加新网站
+            updatedNav = [...category.nav, website];
+          }
+
           return { ...category, nav: updatedNav };
         }
         return category;
@@ -184,6 +207,167 @@ export default function WebManagementPage() {
     setMovingWebsite(website);
     setSelectedCategory(category);
     setIsMoveModalOpen(true);
+  };
+
+  // 添加网站到分类
+  const handleAddWebsite = (category: ICategory) => {
+    setSelectedCategory(category);
+    setEditingWebsite(undefined); // 添加新模式
+    setIsEditModalOpen(true);
+  };
+
+  // 添加分类
+  const handleAddCategory = () => {
+    setEditingCategory(undefined); // 添加新模式
+    setIsEditCategoryModalOpen(true);
+  };
+
+  // 编辑分类
+  const handleEditCategory = (category: ICategory) => {
+    setEditingCategory(category);
+    setIsEditCategoryModalOpen(true);
+  };
+
+  // 保存分类
+  const handleSaveCategory = async (category: ICategory) => {
+    try {
+      let updatedCategories;
+
+      if (editingCategory) {
+        // 编辑现有分类
+        updatedCategories = categories.map((cat) =>
+          cat.id === category.id ? { ...category, nav: cat.nav || [] } : cat
+        );
+      } else {
+        // 添加新分类
+        const newCategory = {
+          ...category,
+          nav: category.nav || [], // 确保新分类有nav数组
+        };
+        updatedCategories = [...categories, newCategory];
+      }
+
+      // 保存到本地存储
+      await saveCategories(updatedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(updatedCategories);
+      }
+
+      setIsEditCategoryModalOpen(false);
+      setEditingCategory(undefined);
+    } catch (error) {
+      console.error('保存分类失败:', error);
+      setMessage({ type: 'error', text: '保存失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 删除分类
+  const handleDeleteCategory = (category: ICategory) => {
+    setDeletingCategory(category);
+    setIsDeleteCategoryModalOpen(true);
+  };
+
+  // 确认删除分类
+  const confirmDeleteCategory = async () => {
+    if (!deletingCategory) return;
+
+    try {
+      // 从分类列表中移除该分类
+      const updatedCategories = categories.filter(
+        (cat) => cat.id !== deletingCategory.id
+      );
+
+      // 保存到本地存储
+      await saveCategories(updatedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(updatedCategories);
+      }
+
+      setIsDeleteCategoryModalOpen(false);
+      setDeletingCategory(null);
+    } catch (error) {
+      console.error('删除分类失败:', error);
+      setMessage({ type: 'error', text: '删除失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 保存分类排序
+  const handleSaveCategorySort = async (sortedCategories: ICategory[]) => {
+    try {
+      // 保存到本地存储
+      await saveCategories(sortedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(sortedCategories);
+      }
+
+      setIsCategorySortModalOpen(false);
+      setMessage({ type: 'success', text: '分类排序已保存！' });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error) {
+      console.error('保存分类排序失败:', error);
+      setMessage({ type: 'error', text: '保存排序失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 保存网站排序
+  const handleSaveWebsiteSort = async (categoryId: number, sortedWebsites: IWebsite[]) => {
+    try {
+      // 更新本地状态
+      const updatedCategories = categories.map((category) => {
+        if (category.id === categoryId) {
+          return { ...category, nav: sortedWebsites };
+        }
+        return category;
+      });
+
+      // 保存到本地存储
+      await saveCategories(updatedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(updatedCategories);
+      }
+
+      setIsWebsiteSortModalOpen(false);
+      setSortingCategory(null);
+      setMessage({ type: 'success', text: '网站排序已保存！' });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error) {
+      console.error('保存网站排序失败:', error);
+      setMessage({ type: 'error', text: '保存排序失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 显示网站排序模态框
+  const handleShowWebsiteSort = (category: ICategory) => {
+    setSortingCategory(category);
+    setIsWebsiteSortModalOpen(true);
   };
 
   // 确认移动网站
@@ -316,6 +500,9 @@ export default function WebManagementPage() {
     setLastSyncTime(lastSync);
   }, [fetchCategories, getLastSyncTime]);
 
+  // 使用原始分类顺序，不进行额外排序
+  const sortedCategories = categories;
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -332,7 +519,7 @@ export default function WebManagementPage() {
         const matchedWebsites: { category: ICategory; website: IWebsite }[] =
           [];
 
-        categories.forEach((category) => {
+        sortedCategories.forEach((category) => {
           // 检查分类标题是否匹配（用于分类搜索）
           if (
             category.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -345,13 +532,7 @@ export default function WebManagementPage() {
             if (
               website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
               website.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              website.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              (website.tags &&
-                website.tags.some(
-                  (tag) =>
-                    tag.name &&
-                    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-                ))
+              website.url.toLowerCase().includes(searchQuery.toLowerCase())
             ) {
               matchedWebsites.push({ category, website });
             }
@@ -363,7 +544,7 @@ export default function WebManagementPage() {
           filteredWebsites: matchedWebsites,
         };
       })()
-    : { filteredCategories: categories, filteredWebsites: [] };
+    : { filteredCategories: sortedCategories, filteredWebsites: [] };
 
   return (
     <div className="p-6">
@@ -389,7 +570,16 @@ export default function WebManagementPage() {
               {isSyncing ? '同步中...' : '更新到远程'}
             </button>
           )}
-          <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">
+          <button
+            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors"
+            onClick={() => setIsCategorySortModalOpen(true)}
+          >
+            分类排序
+          </button>
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+            onClick={handleAddCategory}
+          >
             添加分类
           </button>
         </div>
@@ -572,10 +762,16 @@ export default function WebManagementPage() {
                   </span>
                 </h2>
                 <div className="flex space-x-2">
-                  <button className="text-blue-500 hover:text-blue-700">
+                  <button
+                    className="text-blue-500 hover:text-blue-700"
+                    onClick={() => handleEditCategory(category)}
+                  >
                     编辑
                   </button>
-                  <button className="text-red-500 hover:text-red-700">
+                  <button
+                    className="text-red-500 hover:text-red-700"
+                    onClick={() => handleDeleteCategory(category)}
+                  >
                     删除
                   </button>
                 </div>
@@ -585,9 +781,20 @@ export default function WebManagementPage() {
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                     网站列表
                   </h3>
-                  <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors">
-                    添加网站
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+                      onClick={() => handleShowWebsiteSort(category)}
+                    >
+                      网站排序
+                    </button>
+                    <button
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
+                      onClick={() => handleAddWebsite(category)}
+                    >
+                      添加网站
+                    </button>
+                  </div>
                 </div>
 
                 {category.nav.length === 0 ? (
@@ -699,6 +906,49 @@ export default function WebManagementPage() {
           setMovingWebsite(undefined);
         }}
         onMove={confirmMoveWebsite}
+      />
+
+      {/* 编辑分类模态框 */}
+      <EditCategoryModal
+        category={editingCategory}
+        isOpen={isEditCategoryModalOpen}
+        onClose={() => {
+          setIsEditCategoryModalOpen(false);
+          setEditingCategory(undefined);
+        }}
+        onSave={handleSaveCategory}
+      />
+
+      {/* 删除分类确认模态框 */}
+      <DeleteConfirmModal
+        isOpen={isDeleteCategoryModalOpen}
+        onClose={() => {
+          setIsDeleteCategoryModalOpen(false);
+          setDeletingCategory(null);
+        }}
+        onConfirm={confirmDeleteCategory}
+        itemName={deletingCategory?.title || ''}
+      />
+
+      {/* 分类排序模态框 */}
+      <CategorySortModal
+        key={`category-sort-${categories.length}`}
+        categories={categories}
+        isOpen={isCategorySortModalOpen}
+        onClose={() => setIsCategorySortModalOpen(false)}
+        onSave={handleSaveCategorySort}
+      />
+
+      {/* 网站排序模态框 */}
+      <WebsiteSortModal
+        key={sortingCategory?.id || 'empty'}
+        category={sortingCategory || { id: 0, title: '', icon: '', nav: [] }}
+        isOpen={isWebsiteSortModalOpen}
+        onClose={() => {
+          setIsWebsiteSortModalOpen(false);
+          setSortingCategory(null);
+        }}
+        onSave={handleSaveWebsiteSort}
       />
     </div>
   );

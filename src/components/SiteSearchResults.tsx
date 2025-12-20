@@ -46,13 +46,7 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
           (website) =>
             website.name.toLowerCase().includes(query.toLowerCase()) ||
             website.desc.toLowerCase().includes(query.toLowerCase()) ||
-            website.url.toLowerCase().includes(query.toLowerCase()) ||
-            (website.tags &&
-              website.tags.some(
-                (tag) =>
-                  tag.name &&
-                  tag.name.toLowerCase().includes(query.toLowerCase())
-              ))
+            website.url.toLowerCase().includes(query.toLowerCase())
         );
 
         if (matchingWebsites.length > 0) {
@@ -163,24 +157,7 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
                             <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">
                               {website.desc}
                             </p>
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {website.tags &&
-                                website.tags.slice(0, 3).map(
-                                  (tag) =>
-                                    tag.name && (
-                                      <span
-                                        key={tag.id}
-                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                        style={{
-                                          backgroundColor: `${tag.color}20`,
-                                          color: tag.color,
-                                        }}
-                                      >
-                                        {tag.name}
-                                      </span>
-                                    )
-                                )}
-                            </div>
+                            {/* 标签显示已移除 */}
                           </div>
                         </div>
                       </div>
