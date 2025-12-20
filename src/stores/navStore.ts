@@ -7,10 +7,47 @@ interface NavState {
   loading: boolean;
   fetchCategories: () => Promise<void>;
   updateCategories: (categories: ICategory[]) => void;
+  saveCategories: (categories: ICategory[]) => Promise<void>;
+  getLastSyncTime: () => string | null;
+  clearLocalData: () => void;
 }
 
-// 模拟数据获取函数
+// 存储键常量
+const STORAGE_KEY = 'NAV_CATEGORIES';
+const LAST_SYNC_KEY = 'NAV_LAST_SYNC';
+
+// 从本地存储加载数据
+const loadFromLocalStorage = (): ICategory[] | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.warn('Failed to load from localStorage:', error);
+  }
+  return null;
+};
+
+// 保存到本地存储
+const saveToLocalStorage = (categories: ICategory[]): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+    // 保存最后同步时间戳
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  } catch (error) {
+    console.warn('Failed to save to localStorage:', error);
+  }
+};
+
+// 从本地文件加载数据
 const fetchCategoriesData = async (): Promise<ICategory[]> => {
+  // 首先尝试从本地存储加载
+  const storedCategories = loadFromLocalStorage();
+  if (storedCategories) {
+    return storedCategories;
+  }
+
   // 模拟 API 调用延迟
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -22,19 +59,23 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
       const rawData = await response.json();
 
       // db.json现在已经是两层结构，直接返回
-      return rawData.map((category: ICategory) => ({
+      const categories = rawData.map((category: ICategory) => ({
         id: category.id,
         title: category.title || '未知分类',
         icon: category.icon || '',
         nav: category.nav || [],
       }));
+
+      // 保存到本地存储
+      saveToLocalStorage(categories);
+      return categories;
     }
   } catch (error) {
     console.warn('Failed to load local data, using mock data:', error);
   }
 
   // 如果无法加载本地数据，返回模拟数据
-  return [
+  const mockCategories = [
     {
       id: 1,
       title: '常用工具',
@@ -113,6 +154,10 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
       ],
     },
   ];
+
+  // 保存模拟数据到本地存储
+  saveToLocalStorage(mockCategories);
+  return mockCategories;
 };
 
 export const useNavStore = create<NavState>((set) => ({
@@ -129,4 +174,30 @@ export const useNavStore = create<NavState>((set) => ({
     }
   },
   updateCategories: (categories) => set({ categories }),
+  saveCategories: async (categories) => {
+    // 保存到本地存储
+    saveToLocalStorage(categories);
+
+    // 更新状态
+    set({ categories });
+
+    // 触发重新获取数据（可选）
+    // await get().fetchCategories();
+  },
+  getLastSyncTime: (): string | null => {
+    try {
+      return localStorage.getItem(LAST_SYNC_KEY);
+    } catch (error) {
+      console.warn('Failed to get last sync time:', error);
+      return null;
+    }
+  },
+  clearLocalData: (): void => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LAST_SYNC_KEY);
+    } catch (error) {
+      console.warn('Failed to clear local data:', error);
+    }
+  },
 }));

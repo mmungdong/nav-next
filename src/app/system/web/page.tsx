@@ -5,14 +5,316 @@ import { useNavStore } from '@/stores/navStore';
 import DefaultIcon, { isIconUrlFailed } from '@/components/DefaultIcon';
 import Image from 'next/image';
 import { ICategory, IWebsite } from '@/types';
+import EditWebsiteModal from '@/components/EditWebsiteModal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import MoveWebsiteModal from '@/components/MoveWebsiteModal';
+import { useAuthStore } from '@/stores/authStore';
+import { updateFileContent, getFileContent } from '@/lib/githubApi';
 
 export default function WebManagementPage() {
-  const { categories, loading, fetchCategories } = useNavStore();
+  const {
+    categories,
+    loading,
+    fetchCategories,
+    saveCategories,
+    getLastSyncTime,
+  } = useNavStore();
+  const { githubToken } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingWebsite, setEditingWebsite] = useState<IWebsite | undefined>(
+    undefined
+  );
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingWebsite, setDeletingWebsite] = useState<IWebsite | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [movingWebsite, setMovingWebsite] = useState<IWebsite | undefined>(
+    undefined
+  );
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(
+    null
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
+  // 消息展示组件
+  const MessageDisplay = () => {
+    if (!message) return null;
+
+    return (
+      <div
+        className={`mb-4 p-4 rounded-lg ${
+          message.type === 'success'
+            ? 'bg-green-100 text-green-800 border border-green-200'
+            : 'bg-red-100 text-red-800 border border-red-200'
+        }`}
+      >
+        <div className="flex items-start">
+          {message.type === 'success' ? (
+            <svg
+              className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 13l4 4L19 7"
+              ></path>
+            </svg>
+          ) : (
+            <svg
+              className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          )}
+          <div>
+            {message.text.split('\n').map((line, index) => (
+              <div key={index}>{line}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 编辑网站
+  const handleEditWebsite = (website: IWebsite) => {
+    setEditingWebsite(website);
+    setIsEditModalOpen(true);
+  };
+
+  // 保存网站
+  const handleSaveWebsite = async (website: IWebsite) => {
+    try {
+      // 更新本地状态
+      const updatedCategories = categories.map((category) => {
+        if (category.id === selectedCategory?.id) {
+          const updatedNav = category.nav.map((w) =>
+            w.id === website.id ? website : w
+          );
+          return { ...category, nav: updatedNav };
+        }
+        return category;
+      });
+
+      // 保存到本地存储
+      await saveCategories(updatedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(updatedCategories);
+      }
+
+      setIsEditModalOpen(false);
+      setEditingWebsite(undefined);
+    } catch (error) {
+      console.error('保存网站失败:', error);
+      setMessage({ type: 'error', text: '保存失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 删除网站
+  const handleDeleteWebsite = (website: IWebsite, category: ICategory) => {
+    setDeletingWebsite(website);
+    setSelectedCategory(category);
+    setIsDeleteModalOpen(true);
+  };
+
+  // 确认删除网站
+  const confirmDeleteWebsite = async () => {
+    if (!deletingWebsite || !selectedCategory) return;
+
+    try {
+      // 更新本地状态
+      const updatedCategories = categories.map((category) => {
+        if (category.id === selectedCategory.id) {
+          const updatedNav = category.nav.filter(
+            (w) => w.id !== deletingWebsite.id
+          );
+          return { ...category, nav: updatedNav };
+        }
+        return category;
+      });
+
+      // 保存到本地存储
+      await saveCategories(updatedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(updatedCategories);
+      }
+
+      setIsDeleteModalOpen(false);
+      setDeletingWebsite(null);
+      setSelectedCategory(null);
+    } catch (error) {
+      console.error('删除网站失败:', error);
+      setMessage({ type: 'error', text: '删除失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 移动网站
+  const handleMoveWebsite = (website: IWebsite, category: ICategory) => {
+    setMovingWebsite(website);
+    setSelectedCategory(category);
+    setIsMoveModalOpen(true);
+  };
+
+  // 确认移动网站
+  const confirmMoveWebsite = async (targetCategoryId: number) => {
+    if (!movingWebsite || !selectedCategory) return;
+
+    try {
+      // 更新本地状态
+      let updatedCategories = [...categories];
+
+      // 从原分类中删除
+      updatedCategories = updatedCategories.map((category) => {
+        if (category.id === selectedCategory.id) {
+          const updatedNav = category.nav.filter(
+            (w) => w.id !== movingWebsite.id
+          );
+          return { ...category, nav: updatedNav };
+        }
+        return category;
+      });
+
+      // 添加到目标分类
+      updatedCategories = updatedCategories.map((category) => {
+        if (category.id === targetCategoryId) {
+          const updatedNav = [...category.nav, movingWebsite];
+          return { ...category, nav: updatedNav };
+        }
+        return category;
+      });
+
+      // 保存到本地存储
+      await saveCategories(updatedCategories);
+
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 如果有GitHub Token，同步到GitHub
+      if (githubToken) {
+        await syncToGitHub(updatedCategories);
+      }
+
+      setIsMoveModalOpen(false);
+      setMovingWebsite(undefined);
+      setSelectedCategory(null);
+    } catch (error) {
+      console.error('移动网站失败:', error);
+      setMessage({ type: 'error', text: '移动失败，请重试' });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  // 同步到GitHub
+  const syncToGitHub = async (updatedCategories: ICategory[]) => {
+    if (!githubToken) return;
+
+    try {
+      // 获取文件信息（需要SHA来更新文件）
+      const owner = 'mmungdong'; // 替换为实际的仓库所有者
+      const repo = 'nav-next'; // 替换为实际的仓库名
+      const path = 'public/data/db.json';
+      const branch = 'main';
+
+      // 获取当前文件的SHA
+      const fileInfo = await getFileContent(
+        githubToken,
+        owner,
+        repo,
+        path,
+        branch
+      );
+
+      // 准备文件内容
+      const content = JSON.stringify(updatedCategories, null, 2);
+
+      // 更新或创建文件
+      await updateFileContent(
+        githubToken,
+        owner,
+        repo,
+        path,
+        content,
+        `Update website data: ${new Date().toISOString()}`,
+        branch,
+        fileInfo.sha || undefined // 如果文件不存在，sha为undefined
+      );
+    } catch (error) {
+      console.error('同步到GitHub失败:', error);
+      // 将错误信息传递给调用者
+      throw new Error((error as Error).message || '同步到GitHub失败');
+    }
+  };
+
+  // 手动同步到远程
+  const handleSyncToRemote = async () => {
+    if (!githubToken || isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      await syncToGitHub(categories);
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+      setMessage({ type: 'success', text: '数据已成功同步到远程仓库！' });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error) {
+      console.error('同步失败:', error);
+      let errorMessage = (error as Error).message || '未知错误';
+
+      // 为私有仓库问题提供更明确的指导
+      if (
+        errorMessage.includes('无法访问私有仓库') ||
+        errorMessage.includes('Resource not accessible')
+      ) {
+        errorMessage +=
+          '。请确保：\n1. GitHub Token具有完整的repo权限\n2. 您对私有仓库有访问权限\n3. 如果属于组织，检查是否需要SSO授权';
+      }
+
+      setMessage({ type: 'error', text: `同步失败: ${errorMessage}` });
+      setTimeout(() => setMessage(null), 10000); // 私有仓库问题显示更长时间
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+    // 获取最后同步时间
+    const lastSync = getLastSyncTime();
+    setLastSyncTime(lastSync);
+  }, [fetchCategories, getLastSyncTime]);
 
   if (loading) {
     return (
@@ -65,13 +367,32 @@ export default function WebManagementPage() {
 
   return (
     <div className="p-6">
+      <MessageDisplay />
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          网站管理
-        </h1>
-        <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">
-          添加分类
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            网站管理
+          </h1>
+          {lastSyncTime && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              最后同步: {new Date(lastSyncTime).toLocaleString()}
+            </p>
+          )}
+        </div>
+        <div className="flex space-x-2">
+          {githubToken && (
+            <button
+              className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={handleSyncToRemote}
+              disabled={isSyncing}
+            >
+              {isSyncing ? '同步中...' : '更新到远程'}
+            </button>
+          )}
+          <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">
+            添加分类
+          </button>
+        </div>
       </div>
 
       {/* 搜索栏 */}
@@ -182,10 +503,22 @@ export default function WebManagementPage() {
                     </div>
 
                     <div className="mt-3 flex justify-end space-x-2">
-                      <button className="text-blue-500 hover:text-blue-700 text-sm">
+                      <button
+                        className="text-blue-500 hover:text-blue-700 text-sm"
+                        onClick={() => handleEditWebsite(website)}
+                      >
                         编辑
                       </button>
-                      <button className="text-red-500 hover:text-red-700 text-sm">
+                      <button
+                        className="text-green-500 hover:text-green-700 text-sm"
+                        onClick={() => handleMoveWebsite(website, category)}
+                      >
+                        移动
+                      </button>
+                      <button
+                        className="text-red-500 hover:text-red-700 text-sm"
+                        onClick={() => handleDeleteWebsite(website, category)}
+                      >
                         删除
                       </button>
                     </div>
@@ -304,10 +637,24 @@ export default function WebManagementPage() {
                         {/* 标签显示已移除 */}
 
                         <div className="mt-3 flex justify-end space-x-2">
-                          <button className="text-blue-500 hover:text-blue-700 text-sm">
+                          <button
+                            className="text-blue-500 hover:text-blue-700 text-sm"
+                            onClick={() => handleEditWebsite(website)}
+                          >
                             编辑
                           </button>
-                          <button className="text-red-500 hover:text-red-700 text-sm">
+                          <button
+                            className="text-green-500 hover:text-green-700 text-sm"
+                            onClick={() => handleMoveWebsite(website, category)}
+                          >
+                            移动
+                          </button>
+                          <button
+                            className="text-red-500 hover:text-red-700 text-sm"
+                            onClick={() =>
+                              handleDeleteWebsite(website, category)
+                            }
+                          >
                             删除
                           </button>
                         </div>
@@ -320,6 +667,39 @@ export default function WebManagementPage() {
           ))}
         </div>
       )}
+      {/* 编辑网站模态框 */}
+      <EditWebsiteModal
+        website={editingWebsite}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingWebsite(undefined);
+        }}
+        onSave={handleSaveWebsite}
+      />
+
+      {/* 删除确认模态框 */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeletingWebsite(null);
+        }}
+        onConfirm={confirmDeleteWebsite}
+        itemName={deletingWebsite?.name || ''}
+      />
+
+      {/* 移动网站模态框 */}
+      <MoveWebsiteModal
+        categories={categories}
+        website={movingWebsite}
+        isOpen={isMoveModalOpen}
+        onClose={() => {
+          setIsMoveModalOpen(false);
+          setMovingWebsite(undefined);
+        }}
+        onMove={confirmMoveWebsite}
+      />
     </div>
   );
 }

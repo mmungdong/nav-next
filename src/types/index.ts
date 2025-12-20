@@ -14,17 +14,18 @@ export interface IWebsite {
   desc: string;
   url: string;
   icon: string;
-  tags: IWebTag[];
-  rate: number; // 0-5
-  top: boolean;
-  ownVisible: boolean;
-  [key: string]: string | number | boolean | IWebTag[] | undefined; // 更具体的类型
+  tags?: IWebTag[];
+  rate?: number; // 0-5
+  top?: boolean;
+  ownVisible?: boolean;
+  topTypes?: number[];
+  [key: string]: string | number | boolean | IWebTag[] | number[] | undefined; // 更具体的类型
 }
 
 export interface ICategory {
   id: number;
   title: string;
-  icon: string;
+  icon?: string;
   nav: IWebsite[];
 }
 
