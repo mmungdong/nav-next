@@ -182,43 +182,38 @@ nav-next/
 
 #### 3. 组件库 (src/components/)
 
-包含可复用的UI组件，如：
+包含可复用的UI组件：
 
-- breadcrumb: 面包屑导航
-- calendar: 日历组件
-- card: 卡片组件
-- create-web: 创建网站组件
-- delete-modal: 删除确认模态框
-- edit-class: 编辑分类组件
-- footer: 页脚组件
-- loading: 加载动画
-- login: 登录组件
+- SearchModal: 搜索模态框组件
+- SiteSearchResults: 站内搜索结果组件
+- UnifiedLayout: 统一布局组件
+- layout/Sidebar: 侧边栏组件
+- GithubTokenAuth: GitHub Token认证组件
+- ProtectedRoute: 受保护路由组件
+- DefaultIcon: 默认图标组件
 
 #### 4. 状态管理 (src/stores/)
 
 使用Zustand进行状态管理：
 
 - `navStore`: 导航数据状态
-- `settings`: 系统设置
-- `search`: 搜索配置
-- `tagList`: 标签列表
+- `authStore`: 认证状态管理
 
 #### 5. 服务层 (src/lib/)
 
 提供业务逻辑和服务封装：
 
-- `api`: API接口调用
+- `githubApi`: GitHub API接口调用
 - `utils`: 工具函数
 
-#### 6. 工具函数 (src/lib/utils/)
+#### 6. 类型定义 (src/types/)
 
-包含各种辅助函数：
+包含TypeScript类型定义：
 
-- 路由处理
-- 用户认证
-- 数据处理
-- 设备检测
-- 字符串操作
+- `IWebTag`: 网站标签接口
+- `IWebsite`: 网站接口
+- `ICategory`: 分类接口
+- `ISettings`: 设置接口
 
 ## 配置文件
 
@@ -434,6 +429,7 @@ npm update
 - 后台管理系统迁移
 - 用户认证系统实现
 - 权限控制系统实现
+- 搜索功能实现
 
 ### 质量保证
 
