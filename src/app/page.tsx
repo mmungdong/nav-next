@@ -150,7 +150,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
               <span className="mr-2 text-xl">🌐</span>
-              晨雾漫路
+              Guidebook
             </h1>
             <button
               onClick={() => setIsMenuOpen(false)}

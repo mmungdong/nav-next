@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 export default function SettingManagementPage() {
   const [settings, setSettings] = useState({
-    siteName: '发现导航',
-    siteDescription: '一个简洁实用的导航网站',
+    siteName: 'Guidebook',
+    siteDescription: 'Brookside Guidebook',
     siteKeywords: '导航,网站导航,实用工具',
     icpNumber: '',
     analyticsCode: '',

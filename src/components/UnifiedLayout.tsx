@@ -56,7 +56,7 @@ export default function UnifiedLayout({ children, showSidebar = true }: UnifiedL
                 </svg>
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                发现导航
+                Guidebook
               </h1>
             </Link>
           </div>
