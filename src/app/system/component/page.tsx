@@ -2,21 +2,58 @@
 
 import { useState } from 'react';
 
+interface ComponentConfig {
+  [key: string]: string | number | boolean;
+}
+
+interface ComponentItem {
+  id: number;
+  name: string;
+  type: string;
+  isEnabled: boolean;
+  config: ComponentConfig;
+}
+
 export default function ComponentManagementPage() {
   const [components, setComponents] = useState([
-    { id: 1, name: '日历', type: 'calendar', isEnabled: true, config: { theme: 'light' } },
-    { id: 2, name: '倒计时', type: 'countdown', isEnabled: true, config: { targetDate: '2024-12-31' } },
-    { id: 3, name: '新闻', type: 'news', isEnabled: false, config: { source: 'top-headlines' } },
-    { id: 4, name: '天气', type: 'weather', isEnabled: true, config: { location: '北京' } },
+    {
+      id: 1,
+      name: '日历',
+      type: 'calendar',
+      isEnabled: true,
+      config: { theme: 'light' },
+    },
+    {
+      id: 2,
+      name: '倒计时',
+      type: 'countdown',
+      isEnabled: true,
+      config: { targetDate: '2024-12-31' },
+    },
+    {
+      id: 3,
+      name: '新闻',
+      type: 'news',
+      isEnabled: false,
+      config: { source: 'top-headlines' },
+    },
+    {
+      id: 4,
+      name: '天气',
+      type: 'weather',
+      isEnabled: true,
+      config: { location: '北京' },
+    },
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<any>(null);
+  const [editingComponent, setEditingComponent] = useState<ComponentItem | null>(null);
 
   // 过滤组件
-  const filteredComponents = components.filter(component =>
-    component.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    component.type.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredComponents = components.filter(
+    (component) =>
+      component.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      component.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddComponent = () => {
@@ -24,34 +61,42 @@ export default function ComponentManagementPage() {
     setShowModal(true);
   };
 
-  const handleEditComponent = (component: any) => {
+  const handleEditComponent = (component: ComponentItem) => {
     setEditingComponent(component);
     setShowModal(true);
   };
 
   const handleDeleteComponent = (id: number) => {
     if (confirm('确定要删除这个组件吗？')) {
-      setComponents(components.filter(component => component.id !== id));
+      setComponents(components.filter((component) => component.id !== id));
     }
   };
 
   const handleToggleEnabled = (id: number) => {
-    setComponents(components.map(component =>
-      component.id === id ? { ...component, isEnabled: !component.isEnabled } : component
-    ));
+    setComponents(
+      components.map((component) =>
+        component.id === id
+          ? { ...component, isEnabled: !component.isEnabled }
+          : component
+      )
+    );
   };
 
-  const handleSaveComponent = (componentData: any) => {
+  const handleSaveComponent = (componentData: Partial<ComponentItem>) => {
     if (editingComponent) {
       // 编辑组件
-      setComponents(components.map(component =>
-        component.id === editingComponent.id ? { ...component, ...componentData } : component
-      ));
+      setComponents(
+        components.map((component) =>
+          component.id === editingComponent.id
+            ? { ...component, ...componentData }
+            : component
+        )
+      );
     } else {
       // 添加组件
       const newComponent = {
         ...componentData,
-        id: Math.max(...components.map(c => c.id), 0) + 1,
+        id: Math.max(...components.map((c) => c.id), 0) + 1,
       };
       setComponents([...components, newComponent]);
     }
@@ -61,7 +106,9 @@ export default function ComponentManagementPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">组件管理</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          组件管理
+        </h1>
         <button
           onClick={handleAddComponent}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
@@ -86,7 +133,11 @@ export default function ComponentManagementPage() {
             viewBox="0 0 20 20"
             fill="currentColor"
           >
-            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
       </div>
@@ -96,19 +147,34 @@ export default function ComponentManagementPage() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 组件名称
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 类型
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 状态
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 配置
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 操作
               </th>
             </tr>
@@ -117,10 +183,14 @@ export default function ComponentManagementPage() {
             {filteredComponents.map((component) => (
               <tr key={component.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">{component.name}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {component.name}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white capitalize">{component.type}</div>
+                  <div className="text-sm text-gray-900 dark:text-white capitalize">
+                    {component.type}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
@@ -136,9 +206,10 @@ export default function ComponentManagementPage() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 dark:text-white">
-                    {Object.keys(component.config).map(key => (
+                    {Object.keys(component.config).map((key) => (
                       <div key={key} className="text-xs">
-                        <span className="font-medium">{key}:</span> {String((component.config as Record<string, any>)[key])}
+                        <span className="font-medium">{key}:</span>{' '}
+                        {String(component.config[key])}
                       </div>
                     ))}
                   </div>
@@ -175,23 +246,34 @@ export default function ComponentManagementPage() {
   );
 }
 
-function ComponentModal({ component, onSave, onClose }: { component: any; onSave: (component: any) => void; onClose: () => void }) {
+function ComponentModal({
+  component,
+  onSave,
+  onClose,
+}: {
+  component: ComponentItem | null;
+  onSave: (component: Partial<ComponentItem>) => void;
+  onClose: () => void;
+}) {
   const [formData, setFormData] = useState(
     component || {
       name: '',
       type: 'calendar',
       isEnabled: true,
-      config: {}
+      config: {},
     }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type } = e.target;
-    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    const checked =
+      type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
 
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
@@ -200,8 +282,8 @@ function ComponentModal({ component, onSave, onClose }: { component: any; onSave
       ...formData,
       config: {
         ...formData.config,
-        [key]: value
-      }
+        [key]: value,
+      },
     });
   };
 
@@ -289,7 +371,10 @@ function ComponentModal({ component, onSave, onClose }: { component: any; onSave
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               组件名称
             </label>
             <input
@@ -304,7 +389,10 @@ function ComponentModal({ component, onSave, onClose }: { component: any; onSave
           </div>
 
           <div className="mb-4">
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="type"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               组件类型
             </label>
             <select
@@ -337,7 +425,9 @@ function ComponentModal({ component, onSave, onClose }: { component: any; onSave
           </div>
 
           <div className="mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">配置</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              配置
+            </h3>
             {renderConfigFields()}
           </div>
 

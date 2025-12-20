@@ -37,15 +37,26 @@ interface AuthState {
   isGithubAuth: boolean;
   roles: Role[];
   permissions: Permission[];
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  login: (
+    username: string,
+    password: string
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   checkAuth: () => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  updateProfile: (userData: Partial<User>) => Promise<{ success: boolean; message?: string }>;
+  register: (
+    username: string,
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  updateProfile: (
+    userData: Partial<User>
+  ) => Promise<{ success: boolean; message?: string }>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   getUserPermissions: () => string[];
-  validateGithubToken: (token: string) => Promise<{ valid: boolean; message?: string }>;
+  validateGithubToken: (
+    token: string
+  ) => Promise<{ valid: boolean; message?: string }>;
   setGithubToken: (token: string) => void;
   clearGithubToken: () => void;
 }
@@ -53,6 +64,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   user: null,
+  githubToken: null,
+  githubUser: null,
+  isGithubAuth: false,
   roles: [
     {
       id: 'admin',
@@ -65,8 +79,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         'manage_settings',
         'manage_components',
         'view_logs',
-        'manage_system'
-      ]
+        'manage_system',
+      ],
     },
     {
       id: 'editor',
@@ -75,31 +89,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         'manage_websites',
         'manage_categories',
         'manage_tags',
-        'manage_components'
-      ]
+        'manage_components',
+      ],
     },
     {
       id: 'user',
       name: '普通用户',
-      permissions: [
-        'view_websites',
-        'submit_website',
-        'manage_bookmarks'
-      ]
-    }
+      permissions: ['view_websites', 'submit_website', 'manage_bookmarks'],
+    },
   ],
   permissions: [
-    { id: 'manage_users', name: '管理用户', description: '创建、编辑、删除用户' },
-    { id: 'manage_websites', name: '管理网站', description: '添加、编辑、删除网站' },
-    { id: 'manage_categories', name: '管理分类', description: '创建、编辑、删除分类' },
-    { id: 'manage_tags', name: '管理标签', description: '创建、编辑、删除标签' },
+    {
+      id: 'manage_users',
+      name: '管理用户',
+      description: '创建、编辑、删除用户',
+    },
+    {
+      id: 'manage_websites',
+      name: '管理网站',
+      description: '添加、编辑、删除网站',
+    },
+    {
+      id: 'manage_categories',
+      name: '管理分类',
+      description: '创建、编辑、删除分类',
+    },
+    {
+      id: 'manage_tags',
+      name: '管理标签',
+      description: '创建、编辑、删除标签',
+    },
     { id: 'manage_settings', name: '管理设置', description: '修改系统设置' },
-    { id: 'manage_components', name: '管理组件', description: '添加、编辑、删除组件' },
+    {
+      id: 'manage_components',
+      name: '管理组件',
+      description: '添加、编辑、删除组件',
+    },
     { id: 'view_logs', name: '查看日志', description: '查看系统操作日志' },
     { id: 'manage_system', name: '管理系统', description: '系统维护和管理' },
     { id: 'view_websites', name: '查看网站', description: '浏览网站导航' },
     { id: 'submit_website', name: '提交网站', description: '提交新网站供审核' },
-    { id: 'manage_bookmarks', name: '管理书签', description: '管理个人书签' }
+    { id: 'manage_bookmarks', name: '管理书签', description: '管理个人书签' },
   ],
   login: async (username, password) => {
     try {
@@ -111,7 +141,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           username: 'admin',
           role: 'admin',
           email: 'admin@example.com',
-          avatar: '/avatar.png'
+          avatar: '/avatar.png',
         };
         set({ isAuthenticated: true, user });
         // 保存认证信息到localStorage
@@ -127,7 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           username,
           role: 'user',
           email: `${username}@example.com`,
-          avatar: '/avatar.png'
+          avatar: '/avatar.png',
         };
         set({ isAuthenticated: true, user });
         // 保存认证信息到localStorage
@@ -137,12 +167,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       return { success: false, message: '用户名或密码错误' };
-    } catch (error) {
+    } catch {
       return { success: false, message: '登录失败，请稍后再试' };
     }
   },
   logout: () => {
-    set({ isAuthenticated: false, user: null, githubToken: null, githubUser: null, isGithubAuth: false });
+    set({
+      isAuthenticated: false,
+      user: null,
+      githubToken: null,
+      githubUser: null,
+      isGithubAuth: false,
+    });
     // 清除localStorage中的认证信息
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
@@ -177,17 +213,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             username: githubUser.login,
             role: 'admin', // GitHub用户默认为管理员
             email: githubUser.email || '',
-            avatar: githubUser.avatar_url
-          }
+            avatar: githubUser.avatar_url,
+          },
         });
       }
-    } catch (error) {
+    } catch {
       // 如果解析失败，清除认证信息
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       localStorage.removeItem('githubToken');
       localStorage.removeItem('githubUser');
-      set({ isAuthenticated: false, user: null, githubToken: null, githubUser: null, isGithubAuth: false });
+      set({
+        isAuthenticated: false,
+        user: null,
+        githubToken: null,
+        githubUser: null,
+        isGithubAuth: false,
+      });
     }
   },
   register: async (username, email, password) => {
@@ -206,7 +248,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           username,
           role: 'user',
           email,
-          avatar: '/avatar.png'
+          avatar: '/avatar.png',
         };
         set({ isAuthenticated: true, user });
         // 保存认证信息到localStorage
@@ -216,7 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       return { success: false, message: '请填写所有必填字段' };
-    } catch (error) {
+    } catch {
       return { success: false, message: '注册失败，请稍后再试' };
     }
   },
@@ -235,7 +277,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.setItem('user', JSON.stringify(updatedUser));
 
       return { success: true };
-    } catch (error) {
+    } catch {
       return { success: false, message: '更新失败，请稍后再试' };
     }
   },
@@ -243,7 +285,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const state = get();
     if (!state.isAuthenticated || !state.user) return false;
 
-    const role = state.roles.find(r => r.id === state.user?.role);
+    const role = state.roles.find((r) => r.id === state.user?.role);
     return !!role && role.permissions.includes(permission);
   },
   hasRole: (role) => {
@@ -255,7 +297,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const state = get();
     if (!state.isAuthenticated || !state.user) return [];
 
-    const role = state.roles.find(r => r.id === state.user?.role);
+    const role = state.roles.find((r) => r.id === state.user?.role);
     return role ? role.permissions : [];
   },
   validateGithubToken: async (token: string) => {
@@ -281,8 +323,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             username: result.user.login,
             role: 'admin', // GitHub用户默认为管理员
             email: result.user.email || '',
-            avatar: result.user.avatar_url
-          }
+            avatar: result.user.avatar_url,
+          },
         });
 
         return { valid: true };
@@ -299,5 +341,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   clearGithubToken: () => {
     set({ githubToken: null, githubUser: null, isGithubAuth: false });
-  }
+  },
 }));

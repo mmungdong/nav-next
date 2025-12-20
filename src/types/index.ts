@@ -18,7 +18,7 @@ export interface IWebsite {
   rate: number; // 0-5
   top: boolean;
   ownVisible: boolean;
-  [key: string]: any; // 其他字段
+  [key: string]: string | number | boolean | IWebTag[] | undefined; // 更具体的类型
 }
 
 export interface ICategory {
@@ -29,5 +29,5 @@ export interface ICategory {
 }
 
 export interface ISettings {
-  [key: string]: any;
+  [key: string]: string | number | boolean | object | null | undefined;
 }

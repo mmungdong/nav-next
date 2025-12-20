@@ -2,25 +2,59 @@
 
 import { useState } from 'react';
 
+interface Bookmark {
+  id: number;
+  name: string;
+  url: string;
+  folder: string;
+  tags: string[];
+  createdAt: string;
+}
+
 export default function BookmarkManagementPage() {
   const [bookmarks, setBookmarks] = useState([
-    { id: 1, name: '技术博客', url: 'https://tech-blog.com', folder: '学习', tags: ['技术', '博客'], createdAt: '2024-01-15' },
-    { id: 2, name: '设计资源', url: 'https://design-resources.com', folder: '工作', tags: ['设计', '资源'], createdAt: '2024-01-10' },
-    { id: 3, name: '新闻资讯', url: 'https://news-site.com', folder: '日常', tags: ['新闻', '资讯'], createdAt: '2024-01-05' },
+    {
+      id: 1,
+      name: '技术博客',
+      url: 'https://tech-blog.com',
+      folder: '学习',
+      tags: ['技术', '博客'],
+      createdAt: '2024-01-15',
+    },
+    {
+      id: 2,
+      name: '设计资源',
+      url: 'https://design-resources.com',
+      folder: '工作',
+      tags: ['设计', '资源'],
+      createdAt: '2024-01-10',
+    },
+    {
+      id: 3,
+      name: '新闻资讯',
+      url: 'https://news-site.com',
+      folder: '日常',
+      tags: ['新闻', '资讯'],
+      createdAt: '2024-01-05',
+    },
   ]);
   const [folders, setFolders] = useState(['学习', '工作', '日常']);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('全部');
   const [showModal, setShowModal] = useState(false);
-  const [editingBookmark, setEditingBookmark] = useState<any>(null);
+  const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null);
 
   // 过滤书签
-  const filteredBookmarks = bookmarks.filter(bookmark => {
-    const matchesSearch = bookmark.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredBookmarks = bookmarks.filter((bookmark) => {
+    const matchesSearch =
+      bookmark.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bookmark.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bookmark.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      bookmark.tags.some((tag) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
-    const matchesFolder = selectedFolder === '全部' || bookmark.folder === selectedFolder;
+    const matchesFolder =
+      selectedFolder === '全部' || bookmark.folder === selectedFolder;
 
     return matchesSearch && matchesFolder;
   });
@@ -30,29 +64,33 @@ export default function BookmarkManagementPage() {
     setShowModal(true);
   };
 
-  const handleEditBookmark = (bookmark: any) => {
+  const handleEditBookmark = (bookmark: Bookmark) => {
     setEditingBookmark(bookmark);
     setShowModal(true);
   };
 
   const handleDeleteBookmark = (id: number) => {
     if (confirm('确定要删除这个书签吗？')) {
-      setBookmarks(bookmarks.filter(bookmark => bookmark.id !== id));
+      setBookmarks(bookmarks.filter((bookmark) => bookmark.id !== id));
     }
   };
 
-  const handleSaveBookmark = (bookmarkData: any) => {
+  const handleSaveBookmark = (bookmarkData: Partial<Bookmark>) => {
     if (editingBookmark) {
       // 编辑书签
-      setBookmarks(bookmarks.map(bookmark =>
-        bookmark.id === editingBookmark.id ? { ...bookmark, ...bookmarkData } : bookmark
-      ));
+      setBookmarks(
+        bookmarks.map((bookmark) =>
+          bookmark.id === editingBookmark.id
+            ? { ...bookmark, ...bookmarkData }
+            : bookmark
+        )
+      );
     } else {
       // 添加书签
       const newBookmark = {
         ...bookmarkData,
-        id: Math.max(...bookmarks.map(b => b.id), 0) + 1,
-        createdAt: new Date().toISOString().split('T')[0]
+        id: Math.max(...bookmarks.map((b) => b.id), 0) + 1,
+        createdAt: new Date().toISOString().split('T')[0],
       };
       setBookmarks([...bookmarks, newBookmark]);
 
@@ -67,7 +105,9 @@ export default function BookmarkManagementPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">书签管理</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          书签管理
+        </h1>
         <button
           onClick={handleAddBookmark}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
@@ -92,7 +132,11 @@ export default function BookmarkManagementPage() {
             viewBox="0 0 20 20"
             fill="currentColor"
           >
-            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
 
@@ -102,15 +146,19 @@ export default function BookmarkManagementPage() {
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
         >
           <option value="全部">全部文件夹</option>
-          {folders.map(folder => (
-            <option key={folder} value={folder}>{folder}</option>
+          {folders.map((folder) => (
+            <option key={folder} value={folder}>
+              {folder}
+            </option>
           ))}
         </select>
       </div>
 
       {/* 文件夹列表 */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">文件夹</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          文件夹
+        </h2>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedFolder('全部')}
@@ -122,7 +170,7 @@ export default function BookmarkManagementPage() {
           >
             全部 ({bookmarks.length})
           </button>
-          {folders.map(folder => (
+          {folders.map((folder) => (
             <button
               key={folder}
               onClick={() => setSelectedFolder(folder)}
@@ -132,7 +180,7 @@ export default function BookmarkManagementPage() {
                   : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
               }`}
             >
-              {folder} ({bookmarks.filter(b => b.folder === folder).length})
+              {folder} ({bookmarks.filter((b) => b.folder === folder).length})
             </button>
           ))}
         </div>
@@ -143,22 +191,40 @@ export default function BookmarkManagementPage() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 名称
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 URL
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 文件夹
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 标签
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 创建时间
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 操作
               </th>
             </tr>
@@ -167,11 +233,18 @@ export default function BookmarkManagementPage() {
             {filteredBookmarks.map((bookmark) => (
               <tr key={bookmark.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">{bookmark.name}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {bookmark.name}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 dark:text-white truncate max-w-xs">
-                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">
+                    <a
+                      href={bookmark.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-700"
+                    >
                       {bookmark.url}
                     </a>
                   </div>
@@ -227,32 +300,47 @@ export default function BookmarkManagementPage() {
   );
 }
 
-function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; folders: string[]; onSave: (bookmark: any) => void; onClose: () => void }) {
+function BookmarkModal({
+  bookmark,
+  folders,
+  onSave,
+  onClose,
+}: {
+  bookmark: Bookmark | null;
+  folders: string[];
+  onSave: (bookmark: Partial<Bookmark>) => void;
+  onClose: () => void;
+}) {
   const [formData, setFormData] = useState(
     bookmark || {
       name: '',
       url: '',
       folder: folders[0] || '',
       tags: [],
-      newTag: ''
+      newTag: '',
     }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
 
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
   const handleAddTag = () => {
-    if (formData.newTag.trim() && !formData.tags.includes(formData.newTag.trim())) {
+    if (
+      formData.newTag.trim() &&
+      !formData.tags.includes(formData.newTag.trim())
+    ) {
       setFormData({
         ...formData,
         tags: [...formData.tags, formData.newTag.trim()],
-        newTag: ''
+        newTag: '',
       });
     }
   };
@@ -260,7 +348,7 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
   const handleRemoveTag = (tagToRemove: string) => {
     setFormData({
       ...formData,
-      tags: formData.tags.filter((tag: string) => tag !== tagToRemove)
+      tags: formData.tags.filter((tag: string) => tag !== tagToRemove),
     });
   };
 
@@ -268,7 +356,7 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
     e.preventDefault();
     onSave({
       ...formData,
-      tags: formData.tags
+      tags: formData.tags,
     });
   };
 
@@ -281,7 +369,10 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               名称
             </label>
             <input
@@ -296,7 +387,10 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
           </div>
 
           <div className="mb-4">
-            <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="url"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               URL
             </label>
             <input
@@ -311,7 +405,10 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
           </div>
 
           <div className="mb-4">
-            <label htmlFor="folder" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="folder"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               文件夹
             </label>
             <select
@@ -321,8 +418,10 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
-              {folders.map(folder => (
-                <option key={folder} value={folder}>{folder}</option>
+              {folders.map((folder) => (
+                <option key={folder} value={folder}>
+                  {folder}
+                </option>
               ))}
               <option value="">新建文件夹</option>
             </select>
@@ -364,7 +463,9 @@ function BookmarkModal({ bookmark, folders, onSave, onClose }: { bookmark: any; 
                 name="newTag"
                 value={formData.newTag}
                 onChange={handleChange}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                onKeyDown={(e) =>
+                  e.key === 'Enter' && (e.preventDefault(), handleAddTag())
+                }
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder="输入标签并按回车添加"
               />

@@ -15,13 +15,18 @@ export default function SettingManagementPage() {
     enableSEO: true,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value, type } = e.target;
-    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    const checked =
+      type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
 
     setSettings({
       ...settings,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
@@ -33,15 +38,22 @@ export default function SettingManagementPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">系统设置</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+        系统设置
+      </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">基本信息</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            基本信息
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="siteName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="siteName"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 网站名称
               </label>
               <input
@@ -55,7 +67,10 @@ export default function SettingManagementPage() {
             </div>
 
             <div>
-              <label htmlFor="theme" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="theme"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 主题
               </label>
               <select
@@ -72,7 +87,10 @@ export default function SettingManagementPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="siteDescription" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="siteDescription"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 网站描述
               </label>
               <textarea
@@ -86,7 +104,10 @@ export default function SettingManagementPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="siteKeywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="siteKeywords"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 网站关键词
               </label>
               <input
@@ -100,7 +121,10 @@ export default function SettingManagementPage() {
             </div>
 
             <div>
-              <label htmlFor="icpNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="icpNumber"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 ICP备案号
               </label>
               <input
@@ -116,7 +140,9 @@ export default function SettingManagementPage() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">功能设置</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            功能设置
+          </h2>
 
           <div className="space-y-4">
             <div className="flex items-center">
@@ -128,7 +154,10 @@ export default function SettingManagementPage() {
                 onChange={handleChange}
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600"
               />
-              <label htmlFor="enableDarkMode" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="enableDarkMode"
+                className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+              >
                 启用深色模式
               </label>
             </div>
@@ -142,7 +171,10 @@ export default function SettingManagementPage() {
                 onChange={handleChange}
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600"
               />
-              <label htmlFor="enablePWA" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="enablePWA"
+                className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+              >
                 启用PWA支持
               </label>
             </div>
@@ -156,7 +188,10 @@ export default function SettingManagementPage() {
                 onChange={handleChange}
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600"
               />
-              <label htmlFor="enableSEO" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="enableSEO"
+                className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+              >
                 启用SEO优化
               </label>
             </div>
@@ -164,11 +199,16 @@ export default function SettingManagementPage() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">高级设置</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            高级设置
+          </h2>
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="analyticsCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="analyticsCode"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 统计代码
               </label>
               <textarea

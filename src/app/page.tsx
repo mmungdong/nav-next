@@ -3,13 +3,17 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { useAuthStore } from '@/stores/authStore';
-import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from '@/components/DefaultIcon';
+import DefaultIcon, {
+  isIconUrlFailed,
+  markIconUrlAsFailed,
+} from '@/components/DefaultIcon';
 import SearchModal from '@/components/SearchModal';
+import Image from 'next/image';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const { isAuthenticated, checkAuth } = useAuthStore();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('');
@@ -96,29 +100,32 @@ export default function Home() {
   // 当选中的分类改变时，自动滚动菜单到选中项
   useEffect(() => {
     if (activeCategory && menuRef.current) {
-      const activeElement = menuRef.current.querySelector(`[href="#${activeCategory}"]`);
+      const activeElement = menuRef.current.querySelector(
+        `[href="#${activeCategory}"]`
+      );
       if (activeElement) {
         // 平滑滚动到选中项，使其在菜单中可见
         activeElement.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
-          inline: 'nearest'
+          inline: 'nearest',
         });
       }
     }
   }, [activeCategory]);
 
   // 过滤分类和网站
-  const filteredCategories = categories.filter(category => {
+  const filteredCategories = categories.filter((category) => {
     // 检查分类标题是否匹配搜索查询
     if (category.title.toLowerCase().includes(searchQuery.toLowerCase())) {
       return true;
     }
 
     // 检查分类下的网站是否匹配搜索查询
-    return category.nav.some(website =>
-      website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      website.desc.toLowerCase().includes(searchQuery.toLowerCase())
+    return category.nav.some(
+      (website) =>
+        website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        website.desc.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -139,13 +146,26 @@ export default function Home() {
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="lg:hidden fixed top-4 left-4 z-20 p-2 rounded-md bg-white dark:bg-gray-800 shadow-md"
       >
-        <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        <svg
+          className="w-6 h-6 text-gray-600 dark:text-gray-300"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6h16M4 12h16M4 18h16"
+          />
         </svg>
       </button>
 
       {/* 左侧分类菜单 */}
-      <div ref={menuRef} className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}>
+      <div
+        ref={menuRef}
+        className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}
+      >
         <div className="p-5">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
@@ -156,8 +176,18 @@ export default function Home() {
               onClick={() => setIsMenuOpen(false)}
               className="lg:hidden p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5 text-gray-500 dark:text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -172,10 +202,14 @@ export default function Home() {
                     onClick={(e) => {
                       e.preventDefault();
                       setIsMenuOpen(false);
-                      const element = document.getElementById(category.id.toString());
+                      const element = document.getElementById(
+                        category.id.toString()
+                      );
                       if (element) {
                         // 触发自定义事件，通知滚动监听器用户正在导航
-                        window.dispatchEvent(new CustomEvent('click-navigation'));
+                        window.dispatchEvent(
+                          new CustomEvent('click-navigation')
+                        );
                         // 直接设置激活的分类，避免逐个高亮
                         setActiveCategory(category.id.toString());
                         // 平滑滚动到目标元素
@@ -189,14 +223,16 @@ export default function Home() {
                     }`}
                     onMouseEnter={(e) => {
                       // 鼠标悬停时改变图标为📂
-                      const iconElement = e.currentTarget.querySelector('.category-icon');
+                      const iconElement =
+                        e.currentTarget.querySelector('.category-icon');
                       if (iconElement) {
                         iconElement.textContent = '📂';
                       }
                     }}
                     onMouseLeave={(e) => {
                       // 鼠标离开时根据激活状态设置图标
-                      const iconElement = e.currentTarget.querySelector('.category-icon');
+                      const iconElement =
+                        e.currentTarget.querySelector('.category-icon');
                       if (iconElement) {
                         if (activeCategory === category.id.toString()) {
                           iconElement.textContent = '📂';
@@ -206,12 +242,27 @@ export default function Home() {
                       }
                     }}
                   >
-                    <span className="mr-3 text-xl category-icon">{category.icon || (activeCategory === category.id.toString() ? '📂' : '📁')}</span>
+                    <span className="mr-3 text-xl category-icon">
+                      {category.icon ||
+                        (activeCategory === category.id.toString()
+                          ? '📂'
+                          : '📁')}
+                    </span>
                     <span className="truncate">{category.title}</span>
                     {activeCategory === category.id.toString() && (
                       <span className="ml-auto">
-                        <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <svg
+                          className="w-4 h-4 animate-pulse"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
                         </svg>
                       </span>
                     )}
@@ -248,18 +299,33 @@ export default function Home() {
                 viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">未找到结果</h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">没有找到与 "{searchQuery}" 相关的分类或网站。</p>
+              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+                未找到结果
+              </h3>
+              <p className="mt-1 text-gray-500 dark:text-gray-400">
+                没有找到与 &quot;{searchQuery}&quot; 相关的分类或网站。
+              </p>
             </div>
           ) : (
             <div className="space-y-8">
               {filteredCategories.map((category) => (
-                <div key={category.id} id={category.id.toString()} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+                <div
+                  key={category.id}
+                  id={category.id.toString()}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+                >
                   <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                      <span className="mr-2 text-2xl">{category.icon || '📁'}</span>
+                      <span className="mr-2 text-2xl">
+                        {category.icon || '📁'}
+                      </span>
                       {category.title}
                     </h2>
                   </div>
@@ -276,27 +342,38 @@ export default function Home() {
                           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full">
                             <div className="flex items-start">
                               <>
-                                {website.icon && !isIconUrlFailed(website.icon) ? (
-                                  <img
+                                {website.icon &&
+                                !isIconUrlFailed(website.icon) ? (
+                                  <Image
                                     src={website.icon}
                                     alt={website.name}
-                                    className="w-10 h-10 rounded-lg object-cover mr-3"
+                                    width={40}
+                                    height={40}
+                                    className="rounded-lg object-cover mr-3"
                                     onError={(e) => {
                                       // 如果图标加载失败，标记为失败并显示默认图标
                                       markIconUrlAsFailed(website.icon);
                                       // 隐藏失败的图标
                                       e.currentTarget.style.display = 'none';
                                       // 显示默认图标
-                                      const defaultIconElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                      const defaultIconElement = e.currentTarget
+                                        .nextElementSibling as HTMLElement;
                                       if (defaultIconElement) {
-                                        defaultIconElement.style.display = 'flex';
+                                        defaultIconElement.style.display =
+                                          'flex';
                                       }
                                     }}
                                   />
                                 ) : null}
                                 <div
                                   className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
-                                  style={{ display: (website.icon && !isIconUrlFailed(website.icon)) ? 'none' : 'flex' }}
+                                  style={{
+                                    display:
+                                      website.icon &&
+                                      !isIconUrlFailed(website.icon)
+                                        ? 'none'
+                                        : 'flex',
+                                  }}
                                 >
                                   <DefaultIcon />
                                 </div>
@@ -330,8 +407,18 @@ export default function Home() {
           className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200 dark:border-gray-700"
           aria-label="回到顶部"
         >
-          <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          <svg
+            className="w-5 h-5 text-gray-700 dark:text-gray-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 15l7-7 7 7"
+            />
           </svg>
         </button>
 
@@ -341,8 +428,18 @@ export default function Home() {
           className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200 dark:border-gray-700"
           aria-label="搜索"
         >
-          <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg
+            className="w-5 h-5 text-gray-700 dark:text-gray-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
         </button>
 
@@ -353,16 +450,34 @@ export default function Home() {
             className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200 dark:border-gray-700"
             aria-label="前往管理页面"
           >
-            <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg
+              className="w-5 h-5 text-gray-700 dark:text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
             </svg>
           </button>
         )}
       </div>
 
       {/* 搜索Modal */}
-      <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
+      <SearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+      />
     </div>
   );
 }

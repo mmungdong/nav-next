@@ -2,23 +2,70 @@
 
 import { useState } from 'react';
 
+interface ConfigItem {
+  id: number;
+  key: string;
+  name: string;
+  value: string;
+  type: 'string' | 'text' | 'boolean' | 'number' | 'select';
+  options?: string[];
+  description: string;
+}
+
 export default function ConfigManagementPage() {
   const [configs, setConfigs] = useState([
-    { id: 1, key: 'site_title', name: '网站标题', value: '发现导航', type: 'string', description: '网站的标题显示' },
-    { id: 2, key: 'site_description', name: '网站描述', value: '一个简洁实用的导航网站', type: 'text', description: '网站的描述信息' },
-    { id: 3, key: 'enable_registration', name: '启用注册', value: 'false', type: 'boolean', description: '是否允许用户注册' },
-    { id: 4, key: 'max_websites_per_user', name: '用户最大网站数', value: '100', type: 'number', description: '每个用户最多可添加的网站数量' },
-    { id: 5, key: 'default_theme', name: '默认主题', value: 'light', type: 'select', options: ['light', 'dark'], description: '网站默认主题' },
+    {
+      id: 1,
+      key: 'site_title',
+      name: '网站标题',
+      value: '发现导航',
+      type: 'string',
+      description: '网站的标题显示',
+    },
+    {
+      id: 2,
+      key: 'site_description',
+      name: '网站描述',
+      value: '一个简洁实用的导航网站',
+      type: 'text',
+      description: '网站的描述信息',
+    },
+    {
+      id: 3,
+      key: 'enable_registration',
+      name: '启用注册',
+      value: 'false',
+      type: 'boolean',
+      description: '是否允许用户注册',
+    },
+    {
+      id: 4,
+      key: 'max_websites_per_user',
+      name: '用户最大网站数',
+      value: '100',
+      type: 'number',
+      description: '每个用户最多可添加的网站数量',
+    },
+    {
+      id: 5,
+      key: 'default_theme',
+      name: '默认主题',
+      value: 'light',
+      type: 'select',
+      options: ['light', 'dark'],
+      description: '网站默认主题',
+    },
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<any>(null);
+  const [editingConfig, setEditingConfig] = useState<ConfigItem | null>(null);
 
   // 过滤配置项
-  const filteredConfigs = configs.filter(config =>
-    config.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    config.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    config.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredConfigs = configs.filter(
+    (config) =>
+      config.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      config.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      config.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddConfig = () => {
@@ -26,28 +73,30 @@ export default function ConfigManagementPage() {
     setShowModal(true);
   };
 
-  const handleEditConfig = (config: any) => {
+  const handleEditConfig = (config: ConfigItem) => {
     setEditingConfig(config);
     setShowModal(true);
   };
 
   const handleDeleteConfig = (id: number) => {
     if (confirm('确定要删除这个配置项吗？')) {
-      setConfigs(configs.filter(config => config.id !== id));
+      setConfigs(configs.filter((config) => config.id !== id));
     }
   };
 
-  const handleSaveConfig = (configData: any) => {
+  const handleSaveConfig = (configData: Partial<ConfigItem>) => {
     if (editingConfig) {
       // 编辑配置
-      setConfigs(configs.map(config =>
-        config.id === editingConfig.id ? { ...config, ...configData } : config
-      ));
+      setConfigs(
+        configs.map((config) =>
+          config.id === editingConfig.id ? { ...config, ...configData } : config
+        )
+      );
     } else {
       // 添加配置
       const newConfig = {
         ...configData,
-        id: Math.max(...configs.map(c => c.id), 0) + 1,
+        id: Math.max(...configs.map((c) => c.id), 0) + 1,
       };
       setConfigs([...configs, newConfig]);
     }
@@ -57,7 +106,9 @@ export default function ConfigManagementPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">配置管理</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          配置管理
+        </h1>
         <button
           onClick={handleAddConfig}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
@@ -82,7 +133,11 @@ export default function ConfigManagementPage() {
             viewBox="0 0 20 20"
             fill="currentColor"
           >
-            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
       </div>
@@ -92,22 +147,40 @@ export default function ConfigManagementPage() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 配置键
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 配置名称
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 值
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 类型
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 描述
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 操作
               </th>
             </tr>
@@ -116,19 +189,25 @@ export default function ConfigManagementPage() {
             {filteredConfigs.map((config) => (
               <tr key={config.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">{config.key}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {config.key}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">{config.name}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {config.name}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 dark:text-white max-w-xs truncate">
                     {config.type === 'boolean' ? (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        config.value === 'true'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          config.value === 'true'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                        }`}
+                      >
                         {config.value === 'true' ? '开启' : '关闭'}
                       </span>
                     ) : (
@@ -140,7 +219,9 @@ export default function ConfigManagementPage() {
                   {config.type}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 dark:text-white">{config.description}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {config.description}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
@@ -174,7 +255,15 @@ export default function ConfigManagementPage() {
   );
 }
 
-function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config: any) => void; onClose: () => void }) {
+function ConfigModal({
+  config,
+  onSave,
+  onClose,
+}: {
+  config: ConfigItem | null;
+  onSave: (config: Partial<ConfigItem>) => void;
+  onClose: () => void;
+}) {
   const [formData, setFormData] = useState(
     config || {
       key: '',
@@ -182,16 +271,20 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
       value: '',
       type: 'string',
       description: '',
-      options: []
+      options: [],
     }
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
 
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -209,7 +302,10 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="key" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="key"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               配置键
             </label>
             <input
@@ -224,7 +320,10 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
           </div>
 
           <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               配置名称
             </label>
             <input
@@ -239,7 +338,10 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
           </div>
 
           <div className="mb-4">
-            <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="type"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               类型
             </label>
             <select
@@ -258,7 +360,10 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
           </div>
 
           <div className="mb-4">
-            <label htmlFor="value" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="value"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               值
             </label>
             {formData.type === 'boolean' ? (
@@ -296,7 +401,10 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
 
           {formData.type === 'select' && (
             <div className="mb-4">
-              <label htmlFor="options" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="options"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 选项 (用逗号分隔)
               </label>
               <input
@@ -304,7 +412,12 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
                 id="options"
                 name="options"
                 value={formData.options?.join(', ') || ''}
-                onChange={(e) => setFormData({...formData, options: e.target.value.split(',').map(opt => opt.trim())})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    options: e.target.value.split(',').map((opt) => opt.trim()),
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder="选项1, 选项2, 选项3"
               />
@@ -312,7 +425,10 @@ function ConfigModal({ config, onSave, onClose }: { config: any; onSave: (config
           )}
 
           <div className="mb-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               描述
             </label>
             <textarea

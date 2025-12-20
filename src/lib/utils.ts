@@ -2,7 +2,7 @@
 export function getOwnerFromRepoUrl(repoUrl: string): string {
   try {
     const url = new URL(repoUrl);
-    const pathParts = url.pathname.split('/').filter(part => part.length > 0);
+    const pathParts = url.pathname.split('/').filter((part) => part.length > 0);
     if (pathParts.length >= 2) {
       return pathParts[0];
     }

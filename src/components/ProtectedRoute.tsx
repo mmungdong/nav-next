@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({
   children,
   requiredPermission,
-  requiredRole
+  requiredRole,
 }: ProtectedRouteProps) {
   const router = useRouter();
   const { isAuthenticated, checkAuth, hasPermission, hasRole } = useAuthStore();
@@ -48,7 +48,15 @@ export default function ProtectedRoute({
         return;
       }
     }
-  }, [isAuthenticated, loading, requiredPermission, requiredRole, router, hasPermission, hasRole]);
+  }, [
+    isAuthenticated,
+    loading,
+    requiredPermission,
+    requiredRole,
+    router,
+    hasPermission,
+    hasRole,
+  ]);
 
   if (loading) {
     return (
@@ -61,7 +69,9 @@ export default function ProtectedRoute({
   // 如果用户已认证并且满足权限要求，渲染子组件
   if (isAuthenticated) {
     // 检查权限和角色要求
-    const hasRequiredPermission = requiredPermission ? hasPermission(requiredPermission) : true;
+    const hasRequiredPermission = requiredPermission
+      ? hasPermission(requiredPermission)
+      : true;
     const hasRequiredRole = requiredRole ? hasRole(requiredRole) : true;
 
     if (hasRequiredPermission && hasRequiredRole) {

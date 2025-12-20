@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
@@ -28,7 +28,7 @@ body {
 /* 自定义滚动条样式 - 仅纵向滚动条 */
 .custom-scrollbar {
   overflow-x: hidden; /* 隐藏横向滚动条 */
-  overflow-y: auto;    /* 显示纵向滚动条 */
+  overflow-y: auto; /* 显示纵向滚动条 */
   scrollbar-width: thin; /* Firefox 支持 */
   scrollbar-color: rgba(156, 163, 175, 0.5) transparent; /* Firefox 支持 */
 }

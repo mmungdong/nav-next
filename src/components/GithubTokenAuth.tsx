@@ -8,7 +8,9 @@ interface GithubTokenAuthProps {
   onAuthSuccess?: () => void;
 }
 
-export default function GithubTokenAuth({ onAuthSuccess }: GithubTokenAuthProps) {
+export default function GithubTokenAuth({
+  onAuthSuccess,
+}: GithubTokenAuthProps) {
   const router = useRouter();
   const [token, setToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +73,10 @@ export default function GithubTokenAuth({ onAuthSuccess }: GithubTokenAuthProps)
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="token" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="token"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               GitHub Personal Access Token
             </label>
             <input
@@ -86,7 +91,8 @@ export default function GithubTokenAuth({ onAuthSuccess }: GithubTokenAuthProps)
               placeholder="请输入您的 GitHub Token"
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              您可以在 GitHub 的 Settings &gt; Developer settings &gt; Personal access tokens 中生成新的 Token
+              您可以在 GitHub 的 Settings &gt; Developer settings &gt; Personal
+              access tokens 中生成新的 Token
             </p>
           </div>
 
@@ -114,9 +120,25 @@ export default function GithubTokenAuth({ onAuthSuccess }: GithubTokenAuthProps)
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   验证中...
                 </>
@@ -143,7 +165,10 @@ export default function GithubTokenAuth({ onAuthSuccess }: GithubTokenAuthProps)
             </p>
             <ol className="mt-2 text-xs text-gray-500 dark:text-gray-400 list-decimal list-inside space-y-1">
               <li>访问 GitHub 并登录</li>
-              <li>进入 Settings &gt; Developer settings &gt; Personal access tokens</li>
+              <li>
+                进入 Settings &gt; Developer settings &gt; Personal access
+                tokens
+              </li>
               <li>点击 &quot;Generate new token&quot;</li>
               <li>为 Token 添加描述，例如 &quot;nav-next app&quot;</li>
               <li>选择适当的权限（通常需要 repo 权限）</li>

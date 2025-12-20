@@ -21,14 +21,28 @@ export default function DefaultIcon() {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="defaultIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient
+          id="defaultIconGradient"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#4F46E5" />
           <stop offset="100%" stopColor="#7C3AED" />
         </linearGradient>
       </defs>
       <rect width="40" height="40" rx="10" fill="url(#defaultIconGradient)" />
       <circle cx="20" cy="18" r="5" fill="white" opacity="0.9" />
-      <rect x="12" y="25" width="16" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect
+        x="12"
+        y="25"
+        width="16"
+        height="3"
+        rx="1.5"
+        fill="white"
+        opacity="0.9"
+      />
     </svg>
   );
 }

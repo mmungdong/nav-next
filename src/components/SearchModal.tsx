@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SiteSearchResults from './SiteSearchResults';
+import Image from 'next/image';
 
 interface SearchEngine {
   id: string;
@@ -53,14 +54,17 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
 
   // 处理搜索
   const handleSearch = (engineId: string) => {
-    const engine = searchEngines.find(e => e.id === engineId);
+    const engine = searchEngines.find((e) => e.id === engineId);
     if (engine && searchQuery.trim()) {
       if (engine.isInternal) {
         // 站内搜索
         window.location.href = `${engine.url}${encodeURIComponent(searchQuery)}`;
       } else {
         // 外部搜索
-        window.open(`${engine.url}${encodeURIComponent(searchQuery)}`, '_blank');
+        window.open(
+          `${engine.url}${encodeURIComponent(searchQuery)}`,
+          '_blank'
+        );
       }
     }
   };
@@ -84,7 +88,9 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
       document.addEventListener('keydown', handleKeyDown);
       // 阻止背景滚动
       document.body.style.overflow = 'hidden';
-      document.addEventListener('wheel', preventBackgroundScroll, { passive: false });
+      document.addEventListener('wheel', preventBackgroundScroll, {
+        passive: false,
+      });
       // 自动聚焦到搜索框
       setTimeout(() => {
         if (searchInputRef.current) {
@@ -119,7 +125,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl"
           >
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl overflow-visible border border-white/30 dark:border-gray-700/50 relative z-50">
@@ -141,8 +147,18 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                     className="w-full px-4 py-3 pl-12 bg-white/50 dark:bg-gray-700/50 backdrop-blur-xl border border-white/30 dark:border-gray-600/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 shadow-inner"
                   />
                   <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -175,19 +191,17 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                       {engine.id === 'internal' ? (
                         <span className="text-xl mr-3">{engine.icon}</span>
                       ) : (
-                        <img
+                        <Image
                           src={engine.icon}
                           alt={engine.name}
-                          className="w-5 h-5 mr-3 rounded-full"
-                          onError={(e) => {
-                            // 如果图标加载失败，显示默认图标
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.className = 'text-xl mr-3';
-                            e.currentTarget.outerHTML = `<span class="text-xl mr-3">${engine.id === 'baidu' ? '🐻' : engine.id === 'bing' ? '🔎' : '🔍'}</span>`;
-                          }}
+                          width={20}
+                          height={20}
+                          className="rounded-full mr-3"
                         />
                       )}
-                      <span className="font-medium text-gray-900 dark:text-white">{engine.name}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {engine.name}
+                      </span>
                     </motion.button>
                   ))}
                 </div>

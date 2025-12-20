@@ -2,38 +2,77 @@
 
 import { useState } from 'react';
 
+interface Submission {
+  id: number;
+  name: string;
+  url: string;
+  desc: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+}
+
 export default function CollectManagementPage() {
   const [submissions, setSubmissions] = useState([
-    { id: 1, name: 'GitHub', url: 'https://github.com', desc: '全球最大的代码托管平台', status: 'pending', submittedAt: '2024-01-15' },
-    { id: 2, name: 'Stack Overflow', url: 'https://stackoverflow.com', desc: '程序员问答社区', status: 'approved', submittedAt: '2024-01-10' },
-    { id: 3, name: 'MDN Web Docs', url: 'https://developer.mozilla.org', desc: 'Web开发权威文档', status: 'rejected', submittedAt: '2024-01-05' },
+    {
+      id: 1,
+      name: 'GitHub',
+      url: 'https://github.com',
+      desc: '全球最大的代码托管平台',
+      status: 'pending',
+      submittedAt: '2024-01-15',
+    },
+    {
+      id: 2,
+      name: 'Stack Overflow',
+      url: 'https://stackoverflow.com',
+      desc: '程序员问答社区',
+      status: 'approved',
+      submittedAt: '2024-01-10',
+    },
+    {
+      id: 3,
+      name: 'MDN Web Docs',
+      url: 'https://developer.mozilla.org',
+      desc: 'Web开发权威文档',
+      status: 'rejected',
+      submittedAt: '2024-01-05',
+    },
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [viewingSubmission, setViewingSubmission] = useState<any>(null);
+  const [viewingSubmission, setViewingSubmission] = useState<Submission | null>(null);
 
   // 过滤收录提交
-  const filteredSubmissions = submissions.filter(submission =>
-    submission.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    submission.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    submission.desc.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSubmissions = submissions.filter(
+    (submission) =>
+      submission.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      submission.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      submission.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleViewSubmission = (submission: any) => {
+  const handleViewSubmission = (submission: Submission) => {
     setViewingSubmission(submission);
     setShowModal(true);
   };
 
   const handleApprove = (id: number) => {
-    setSubmissions(submissions.map(submission =>
-      submission.id === id ? { ...submission, status: 'approved' } : submission
-    ));
+    setSubmissions(
+      submissions.map((submission) =>
+        submission.id === id
+          ? { ...submission, status: 'approved' }
+          : submission
+      )
+    );
   };
 
   const handleReject = (id: number) => {
-    setSubmissions(submissions.map(submission =>
-      submission.id === id ? { ...submission, status: 'rejected' } : submission
-    ));
+    setSubmissions(
+      submissions.map((submission) =>
+        submission.id === id
+          ? { ...submission, status: 'rejected' }
+          : submission
+      )
+    );
   };
 
   const handleCloseModal = () => {
@@ -44,7 +83,9 @@ export default function CollectManagementPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">收录管理</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          收录管理
+        </h1>
       </div>
 
       {/* 搜索栏 */}
@@ -63,7 +104,11 @@ export default function CollectManagementPage() {
             viewBox="0 0 20 20"
             fill="currentColor"
           >
-            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
       </div>
@@ -73,22 +118,40 @@ export default function CollectManagementPage() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 网站名称
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 URL
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 描述
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 提交时间
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 状态
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th
+                scope="col"
+                className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+              >
                 操作
               </th>
             </tr>
@@ -97,29 +160,45 @@ export default function CollectManagementPage() {
             {filteredSubmissions.map((submission) => (
               <tr key={submission.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">{submission.name}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {submission.name}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 dark:text-white truncate max-w-xs">
-                    <a href={submission.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">
+                    <a
+                      href={submission.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-700"
+                    >
                       {submission.url}
                     </a>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 dark:text-white">{submission.desc}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {submission.desc}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                   {submission.submittedAt}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' :
-                    submission.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
-                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
-                  }`}>
-                    {submission.status === 'pending' ? '待审核' :
-                     submission.status === 'approved' ? '已批准' : '已拒绝'}
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      submission.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                        : submission.status === 'approved'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                    }`}
+                  >
+                    {submission.status === 'pending'
+                      ? '待审核'
+                      : submission.status === 'approved'
+                        ? '已批准'
+                        : '已拒绝'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -163,18 +242,28 @@ export default function CollectManagementPage() {
   );
 }
 
-function SubmissionModal({ submission, onClose }: { submission: any; onClose: () => void }) {
+function SubmissionModal({
+  submission,
+  onClose,
+}: {
+  submission: Submission;
+  onClose: () => void;
+}) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">收录详情</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          收录详情
+        </h2>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               网站名称
             </label>
-            <div className="text-sm text-gray-900 dark:text-white">{submission.name}</div>
+            <div className="text-sm text-gray-900 dark:text-white">
+              {submission.name}
+            </div>
           </div>
 
           <div>
@@ -195,27 +284,38 @@ function SubmissionModal({ submission, onClose }: { submission: any; onClose: ()
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               描述
             </label>
-            <div className="text-sm text-gray-900 dark:text-white">{submission.desc}</div>
+            <div className="text-sm text-gray-900 dark:text-white">
+              {submission.desc}
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               提交时间
             </label>
-            <div className="text-sm text-gray-900 dark:text-white">{submission.submittedAt}</div>
+            <div className="text-sm text-gray-900 dark:text-white">
+              {submission.submittedAt}
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               状态
             </label>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' :
-              submission.status === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
-              'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
-            }`}>
-              {submission.status === 'pending' ? '待审核' :
-               submission.status === 'approved' ? '已批准' : '已拒绝'}
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                submission.status === 'pending'
+                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                  : submission.status === 'approved'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+              }`}
+            >
+              {submission.status === 'pending'
+                ? '待审核'
+                : submission.status === 'approved'
+                  ? '已批准'
+                  : '已拒绝'}
             </span>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ICategory, IWebsite, ISettings } from '@/types';
+import { ICategory, ISettings } from '@/types';
 
 interface NavState {
   categories: ICategory[];
@@ -12,7 +12,7 @@ interface NavState {
 // 模拟数据获取函数
 const fetchCategoriesData = async (): Promise<ICategory[]> => {
   // 模拟 API 调用延迟
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   // 返回模拟数据或从本地文件加载数据
   try {
@@ -22,11 +22,11 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
       const rawData = await response.json();
 
       // db.json现在已经是两层结构，直接返回
-      return rawData.map((category: any) => ({
+      return rawData.map((category: ICategory) => ({
         id: category.id,
         title: category.title || category.name || '未知分类',
         icon: category.icon || '',
-        nav: category.nav || []
+        nav: category.nav || [],
       }));
     }
   } catch (error) {
@@ -46,10 +46,20 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
           desc: '全球最大的搜索引擎',
           url: 'https://www.google.com',
           icon: '',
-          tags: [{ id: 1, name: '搜索', color: '#108ee9', desc: '', isInner: false, noOpen: false, sort: 1 }],
+          tags: [
+            {
+              id: 1,
+              name: '搜索',
+              color: '#108ee9',
+              desc: '',
+              isInner: false,
+              noOpen: false,
+              sort: 1,
+            },
+          ],
           rate: 5,
           top: true,
-          ownVisible: false
+          ownVisible: false,
         },
         {
           id: 102,
@@ -57,12 +67,22 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
           desc: '全球最大的代码托管平台',
           url: 'https://github.com',
           icon: '',
-          tags: [{ id: 2, name: '开发', color: '#2db7f5', desc: '', isInner: false, noOpen: false, sort: 2 }],
+          tags: [
+            {
+              id: 2,
+              name: '开发',
+              color: '#2db7f5',
+              desc: '',
+              isInner: false,
+              noOpen: false,
+              sort: 2,
+            },
+          ],
           rate: 5,
           top: true,
-          ownVisible: false
-        }
-      ]
+          ownVisible: false,
+        },
+      ],
     },
     {
       id: 2,
@@ -75,13 +95,23 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
           desc: 'Web开发权威文档',
           url: 'https://developer.mozilla.org',
           icon: '',
-          tags: [{ id: 3, name: '文档', color: '#87d068', desc: '', isInner: false, noOpen: false, sort: 3 }],
+          tags: [
+            {
+              id: 3,
+              name: '文档',
+              color: '#87d068',
+              desc: '',
+              isInner: false,
+              noOpen: false,
+              sort: 3,
+            },
+          ],
           rate: 5,
           top: true,
-          ownVisible: false
-        }
-      ]
-    }
+          ownVisible: false,
+        },
+      ],
+    },
   ];
 };
 
@@ -98,5 +128,5 @@ export const useNavStore = create<NavState>((set) => ({
       set({ loading: false });
     }
   },
-  updateCategories: (categories) => set({ categories })
+  updateCategories: (categories) => set({ categories }),
 }));
