@@ -62,3 +62,22 @@ body {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(75, 85, 99, 0.8);
 }
+
+/* 移动端触摸优化 */
+.touch-manipulation {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .mobile-friendly {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

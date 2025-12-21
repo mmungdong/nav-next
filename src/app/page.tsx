@@ -17,6 +17,9 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('');
+  const [userInitiatedNavigation, setUserInitiatedNavigation] = useState(false);
+  const [navigationLockEndTime, setNavigationLockEndTime] = useState(0);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,10 +34,19 @@ export default function Home() {
   // 监听页面的滚动事件，自动更新左侧菜单的选中项
   useEffect(() => {
     let ticking = false;
-    let isUserNavigating = false;
 
     const handleScroll = () => {
-      if (!ticking && !isUserNavigating) {
+      // 检查是否仍在锁定期内
+      if (userInitiatedNavigation && Date.now() < navigationLockEndTime) {
+        return; // 锁定期内不更新
+      }
+
+      // 检查是否启用了自动同步
+      if (!autoSyncEnabled) {
+        return; // 未启用自动同步时不更新
+      }
+
+      if (!ticking) {
         requestAnimationFrame(() => {
           if (categories.length === 0) return;
 
@@ -72,20 +84,9 @@ export default function Home() {
       }
     };
 
-    // 当用户点击导航时，暂时禁用滚动监听
-    const handleClickNavigation = () => {
-      isUserNavigating = true;
-      // 1秒后重新启用滚动监听
-      setTimeout(() => {
-        isUserNavigating = false;
-      }, 1000);
-    };
-
     // 延迟绑定滚动事件，确保DOM已经渲染完成
     const timer = setTimeout(() => {
       window.addEventListener('scroll', handleScroll, { passive: true });
-      // 监听自定义的导航点击事件
-      window.addEventListener('click-navigation', handleClickNavigation);
       // 初始化时也触发一次，确保初始状态正确
       handleScroll();
     }, 100);
@@ -93,9 +94,44 @@ export default function Home() {
     return () => {
       clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('click-navigation', handleClickNavigation);
     };
-  }, [categories, activeCategory]);
+  }, [categories, activeCategory, userInitiatedNavigation, navigationLockEndTime, autoSyncEnabled]);
+
+  // 检测用户手动滚动，及时恢复自动同步
+  useEffect(() => {
+    const handleUserScroll = () => {
+      const now = Date.now();
+
+      // 如果是用户主动滚动且在锁定期内
+      if (userInitiatedNavigation && now < navigationLockEndTime) {
+        // 立即解锁
+        setUserInitiatedNavigation(false);
+        setAutoSyncEnabled(true);
+        setNavigationLockEndTime(0);
+      }
+    };
+
+    window.addEventListener('wheel', handleUserScroll);
+    window.addEventListener('touchmove', handleUserScroll);
+
+    return () => {
+      window.removeEventListener('wheel', handleUserScroll);
+      window.removeEventListener('touchmove', handleUserScroll);
+    };
+  }, [userInitiatedNavigation, navigationLockEndTime]);
+
+  // 自动解锁定时器，防止锁定状态持续太久
+  useEffect(() => {
+    if (userInitiatedNavigation && navigationLockEndTime > 0) {
+      const timer = setTimeout(() => {
+        setUserInitiatedNavigation(false);
+        setAutoSyncEnabled(true);
+        setNavigationLockEndTime(0);
+      }, 2000); // 2秒后自动解锁
+
+      return () => clearTimeout(timer);
+    }
+  }, [userInitiatedNavigation, navigationLockEndTime]);
 
   // 当选中的分类改变时，自动滚动菜单到选中项
   useEffect(() => {
@@ -206,12 +242,14 @@ export default function Home() {
                         category.id.toString()
                       );
                       if (element) {
-                        // 触发自定义事件，通知滚动监听器用户正在导航
-                        window.dispatchEvent(
-                          new CustomEvent('click-navigation')
-                        );
-                        // 直接设置激活的分类，避免逐个高亮
+                        // 立即选中菜单项
                         setActiveCategory(category.id.toString());
+
+                        // 设置导航锁定状态
+                        setUserInitiatedNavigation(true);
+                        setNavigationLockEndTime(Date.now() + 2000); // 2秒锁定
+                        setAutoSyncEnabled(false);
+
                         // 平滑滚动到目标元素
                         element.scrollIntoView({ behavior: 'smooth' });
                       }
