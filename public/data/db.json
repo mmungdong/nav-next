@@ -18,7 +18,9 @@
         "url": "https://v.flomoapp.com/mine",
         "icon": "",
         "top": true,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 844,
@@ -27,7 +29,9 @@
         "url": "https://weread.qq.com",
         "icon": "https://rescdn.qqmail.com/node/wr/wrpage/style/images/independent/favicon/favicon_16h.png",
         "top": true,
-        "topTypes": [2]
+        "topTypes": [
+          2
+        ]
       },
       {
         "id": 845,
@@ -64,7 +68,9 @@
         "url": "https://openlist.yangfanbin.cn",
         "icon": "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.png",
         "top": true,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       }
     ]
   },
@@ -80,7 +86,9 @@
         "url": "https://yangfanbin.cn",
         "icon": "https://gcore.jsdelivr.net/gh/mmungdong/image@nav/1750866463565.ico",
         "top": true,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1075,
@@ -90,7 +98,9 @@
         "icon": "https://photos.yangfanbin.cn/vite.svg",
         "top": true,
         "index": null,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1019,
@@ -113,7 +123,9 @@
         "url": "https://www.tboxn.com",
         "icon": "https://tboxn.com/wp-content/uploads/2022/03/cropped-tboxlogo512.png",
         "top": true,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1071,
@@ -129,13 +141,6 @@
     "title": "AI",
     "icon": "",
     "nav": [
-      {
-        "id": 1766380939636,
-        "name": "Cloude Code - Aitmpl",
-        "desc": "提供关于 Cloude Code 的一些 agents，skills，plugins and mcps.",
-        "url": "https://www.aitmpl.com/",
-        "icon": "https://www.google.com/s2/favicons?domain=www.aitmpl.com"
-      },
       {
         "id": 1076,
         "name": "NotebookLM",
@@ -192,6 +197,13 @@
         "url": "https://chatgpt.com",
         "icon": "",
         "index": null
+      },
+      {
+        "id": 1766419362103,
+        "name": "Claude Code - Aitmpl",
+        "desc": "Professional templates and configurations for Anthropic's Claude Code. Get Claude Opus 4.1 working at terminal velocity with 100+ agents, 159+ commands, settings, hooks, and MCPs. Transform your development workflow with AI.",
+        "url": "https://www.aitmpl.com/agents",
+        "icon": "https://www.google.com/s2/favicons?domain=www.aitmpl.com"
       }
     ]
   },
