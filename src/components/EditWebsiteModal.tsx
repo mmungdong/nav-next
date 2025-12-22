@@ -42,32 +42,45 @@ export default function EditWebsiteModal({
   }, [website]);
 
   // 获取网站信息的回调函数
-  const fetchWebInfo = useCallback(async (url: string, currentFormData: IWebsite) => {
-    // 检查是否已经有完整的网站信息
-    const hasCompleteInfo = (currentFormData.name && currentFormData.name.trim() !== '') ||
-                           (currentFormData.desc && currentFormData.desc.trim() !== '') ||
-                           (currentFormData.icon && currentFormData.icon.trim() !== '');
-    if (hasCompleteInfo) return;
+  const fetchWebInfo = useCallback(
+    async (url: string, currentFormData: IWebsite) => {
+      // 检查是否已经有完整的网站信息
+      const hasCompleteInfo =
+        (currentFormData.name && currentFormData.name.trim() !== '') ||
+        (currentFormData.desc && currentFormData.desc.trim() !== '') ||
+        (currentFormData.icon && currentFormData.icon.trim() !== '');
+      if (hasCompleteInfo) return;
 
-    try {
-      setIsFetching(true);
+      try {
+        setIsFetching(true);
 
-      // 获取网站信息
-      const webInfo = await getWebInfo(url);
+        // 获取网站信息
+        const webInfo = await getWebInfo(url);
 
-      // 更新表单数据，只填充空字段
-      setFormData(prev => ({
-        ...prev,
-        name: prev.name && prev.name.trim() !== '' ? prev.name : (webInfo.title || ''),
-        desc: prev.desc && prev.desc.trim() !== '' ? prev.desc : (webInfo.description || ''),
-        icon: prev.icon && prev.icon.trim() !== '' ? prev.icon : (webInfo.url || getFaviconUrl(url) || '')
-      }));
-    } catch (error) {
-      console.warn('获取网站信息失败:', error);
-    } finally {
-      setIsFetching(false);
-    }
-  }, []);
+        // 更新表单数据，只填充空字段
+        setFormData((prev) => ({
+          ...prev,
+          name:
+            prev.name && prev.name.trim() !== ''
+              ? prev.name
+              : webInfo.title || '',
+          desc:
+            prev.desc && prev.desc.trim() !== ''
+              ? prev.desc
+              : webInfo.description || '',
+          icon:
+            prev.icon && prev.icon.trim() !== ''
+              ? prev.icon
+              : webInfo.url || getFaviconUrl(url) || '',
+        }));
+      } catch (error) {
+        console.warn('获取网站信息失败:', error);
+      } finally {
+        setIsFetching(false);
+      }
+    },
+    []
+  );
 
   // 当URL改变时自动获取网站信息（仅在添加模式下）
   useEffect(() => {

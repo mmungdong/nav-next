@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useNavStore } from '@/stores/navStore';
 import { useAuthStore } from '@/stores/authStore';
 import DefaultIcon, {
@@ -9,6 +10,7 @@ import DefaultIcon, {
 } from '@/components/DefaultIcon';
 import SearchModal from '@/components/SearchModal';
 import Image from 'next/image';
+import { animationConfig } from '@/lib/animations';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
@@ -95,7 +97,13 @@ export default function Home() {
       clearTimeout(timer);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [categories, activeCategory, userInitiatedNavigation, navigationLockEndTime, autoSyncEnabled]);
+  }, [
+    categories,
+    activeCategory,
+    userInitiatedNavigation,
+    navigationLockEndTime,
+    autoSyncEnabled,
+  ]);
 
   // 检测用户手动滚动，及时恢复自动同步
   useEffect(() => {
@@ -353,11 +361,19 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-8">
-              {filteredCategories.map((category) => (
-                <div
+              {filteredCategories.map((category, categoryIndex) => (
+                <motion.div
                   key={category.id}
                   id={category.id.toString()}
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: animationConfig.card.enter.duration / 1000,
+                    ease: animationConfig.easings.easeInOut,
+                    delay:
+                      categoryIndex * animationConfig.card.enter.staggerDelay,
+                  }}
                 >
                   <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
@@ -369,13 +385,31 @@ export default function Home() {
                   </div>
                   <div className="p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-                      {category.nav.map((website) => (
-                        <a
+                      {category.nav.map((website, websiteIndex) => (
+                        <motion.a
                           key={website.id}
                           href={website.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block group"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration:
+                              animationConfig.card.enter.duration / 1000,
+                            ease: animationConfig.easings.easeInOut,
+                            delay:
+                              (websiteIndex *
+                                animationConfig.card.enter.staggerDelay) /
+                              2,
+                          }}
+                          whileHover={{
+                            y: animationConfig.card.hover.y,
+                            transition: {
+                              duration:
+                                animationConfig.card.hover.duration / 1000,
+                            },
+                          }}
                         >
                           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full">
                             <div className="flex items-start">
@@ -426,11 +460,11 @@ export default function Home() {
                               </div>
                             </div>
                           </div>
-                        </a>
+                        </motion.a>
                       ))}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

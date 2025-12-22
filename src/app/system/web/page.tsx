@@ -34,8 +34,11 @@ export default function WebManagementPage() {
   const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
   const [deletingWebsite, setDeletingWebsite] = useState<IWebsite | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingCategory, setDeletingCategory] = useState<ICategory | null>(null);
-  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<ICategory | null>(
+    null
+  );
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] =
+    useState(false);
   const [movingWebsite, setMovingWebsite] = useState<IWebsite | undefined>(
     undefined
   );
@@ -50,7 +53,9 @@ export default function WebManagementPage() {
     text: string;
   } | null>(null);
   const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
-  const [sortingCategory, setSortingCategory] = useState<ICategory | null>(null);
+  const [sortingCategory, setSortingCategory] = useState<ICategory | null>(
+    null
+  );
   const [isWebsiteSortModalOpen, setIsWebsiteSortModalOpen] = useState(false);
 
   // 消息展示组件
@@ -118,7 +123,9 @@ export default function WebManagementPage() {
       const updatedCategories = categories.map((category) => {
         if (category.id === selectedCategory?.id) {
           // 检查是否是编辑现有网站还是添加新网站
-          const existingWebsiteIndex = category.nav.findIndex(w => w.id === website.id);
+          const existingWebsiteIndex = category.nav.findIndex(
+            (w) => w.id === website.id
+          );
 
           let updatedNav;
           if (existingWebsiteIndex >= 0) {
@@ -331,7 +338,10 @@ export default function WebManagementPage() {
   };
 
   // 保存网站排序
-  const handleSaveWebsiteSort = async (categoryId: number, sortedWebsites: IWebsite[]) => {
+  const handleSaveWebsiteSort = async (
+    categoryId: number,
+    sortedWebsites: IWebsite[]
+  ) => {
     try {
       // 更新本地状态
       const updatedCategories = categories.map((category) => {

@@ -17,9 +17,14 @@ export default function WebsiteSortModal({
   onClose,
   onSave,
 }: WebsiteSortModalProps) {
-  const [sortedWebsites, setSortedWebsites] = useState<IWebsite[]>(() => [...category.nav]);
+  const [sortedWebsites, setSortedWebsites] = useState<IWebsite[]>(() => [
+    ...category.nav,
+  ]);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    index: number
+  ) => {
     e.dataTransfer.setData('dragIndex', index.toString());
   };
 
@@ -27,7 +32,10 @@ export default function WebsiteSortModal({
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    dropIndex: number
+  ) => {
     e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData('dragIndex'));
 
@@ -123,7 +131,8 @@ export default function WebsiteSortModal({
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
-                          target.parentElement!.innerHTML = '<div className="text-xs">🌐</div>';
+                          target.parentElement!.innerHTML =
+                            '<div className="text-xs">🌐</div>';
                         }}
                       />
                     ) : (

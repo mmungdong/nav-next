@@ -18,9 +18,7 @@
         "url": "https://v.flomoapp.com/mine",
         "icon": "",
         "top": true,
-        "topTypes": [
-          1
-        ]
+        "topTypes": [1]
       },
       {
         "id": 844,
@@ -29,9 +27,7 @@
         "url": "https://weread.qq.com",
         "icon": "https://rescdn.qqmail.com/node/wr/wrpage/style/images/independent/favicon/favicon_16h.png",
         "top": true,
-        "topTypes": [
-          2
-        ]
+        "topTypes": [2]
       },
       {
         "id": 845,
@@ -68,9 +64,7 @@
         "url": "https://openlist.yangfanbin.cn",
         "icon": "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.png",
         "top": true,
-        "topTypes": [
-          1
-        ]
+        "topTypes": [1]
       }
     ]
   },
@@ -86,9 +80,7 @@
         "url": "https://yangfanbin.cn",
         "icon": "https://gcore.jsdelivr.net/gh/mmungdong/image@nav/1750866463565.ico",
         "top": true,
-        "topTypes": [
-          1
-        ]
+        "topTypes": [1]
       },
       {
         "id": 1075,
@@ -98,9 +90,7 @@
         "icon": "https://photos.yangfanbin.cn/vite.svg",
         "top": true,
         "index": null,
-        "topTypes": [
-          1
-        ]
+        "topTypes": [1]
       },
       {
         "id": 1019,
@@ -123,9 +113,7 @@
         "url": "https://www.tboxn.com",
         "icon": "https://tboxn.com/wp-content/uploads/2022/03/cropped-tboxlogo512.png",
         "top": true,
-        "topTypes": [
-          1
-        ]
+        "topTypes": [1]
       },
       {
         "id": 1071,

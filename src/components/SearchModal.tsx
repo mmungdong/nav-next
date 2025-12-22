@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SiteSearchResults from './SiteSearchResults';
 import Image from 'next/image';
+import { animationConfig } from '@/lib/animations';
 
 interface SearchEngine {
   id: string;
@@ -105,17 +106,41 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{
+              opacity: {
+                duration:
+                  animationConfig.modal.backdrop.enter.opacity.duration / 1000,
+                ease: animationConfig.modal.backdrop.enter.opacity.ease,
+              },
+            }}
             onClick={onClose}
             className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm z-40"
+            style={{ willChange: 'opacity' }}
           />
 
           {/* Modal内容 */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            initial={animationConfig.modal.content.enter.initial}
+            animate={animationConfig.modal.content.enter.animate}
+            exit={animationConfig.modal.content.exit.animate}
+            transition={{
+              opacity: {
+                duration:
+                  animationConfig.modal.content.enter.opacity.duration / 1000,
+                ease: animationConfig.modal.content.enter.opacity.ease,
+              },
+              scale: {
+                duration:
+                  animationConfig.modal.content.enter.scale.duration / 1000,
+                ease: animationConfig.modal.content.enter.scale.ease,
+              },
+              y: {
+                duration: animationConfig.modal.content.enter.y.duration / 1000,
+                ease: animationConfig.modal.content.enter.y.ease,
+              },
+            }}
             className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl"
+            style={{ willChange: 'transform, opacity' }}
           >
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl overflow-visible border border-white/30 dark:border-gray-700/50 relative z-50">
               {/* 搜索框 */}
@@ -164,8 +189,22 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                   {searchEngines.map((engine) => (
                     <motion.button
                       key={engine.id}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={{
+                        scale: animationConfig.sidebar.menuItem.hover.scale,
+                        transition: {
+                          duration:
+                            animationConfig.sidebar.menuItem.hover.duration /
+                            1000,
+                        },
+                      }}
+                      whileTap={{
+                        scale: animationConfig.sidebar.menuItem.tap.scale,
+                        transition: {
+                          duration:
+                            animationConfig.sidebar.menuItem.tap.duration /
+                            1000,
+                        },
+                      }}
                       onClick={() => {
                         setSelectedEngine(engine.id);
                         // 对于非站内搜索，只切换选中状态，不立即搜索

@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/animation-optimization/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-12-22T14:00:00.426Z",
+      "trigger": "initial",
+      "approvalId": "approval_1766412000422_eg3fid9k3",
+      "approvalTitle": "动画优化设计文档"
+    }
+  ]
+}

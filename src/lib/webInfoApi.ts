@@ -33,7 +33,7 @@ export async function getWebInfo(url: string): Promise<WebInfo> {
         title: data.title || data.name || '',
         description: data.description || data.desc || '',
         url: data.url || data.icon || '', // 图标URL
-        ...data
+        ...data,
       };
     }
 
@@ -64,7 +64,7 @@ async function getWebInfoFallback(url: string): Promise<WebInfo> {
     return {
       title: domain,
       description: `访问 ${domain}`,
-      url: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}`
+      url: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}`,
     };
   } catch (error) {
     console.warn('备选方案获取网站信息失败:', error);

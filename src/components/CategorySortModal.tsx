@@ -16,9 +16,14 @@ export default function CategorySortModal({
   onClose,
   onSave,
 }: CategorySortModalProps) {
-  const [sortedCategories, setSortedCategories] = useState<ICategory[]>(() => [...categories]);
+  const [sortedCategories, setSortedCategories] = useState<ICategory[]>(() => [
+    ...categories,
+  ]);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    index: number
+  ) => {
     e.dataTransfer.setData('dragIndex', index.toString());
   };
 
@@ -26,7 +31,10 @@ export default function CategorySortModal({
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    dropIndex: number
+  ) => {
     e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData('dragIndex'));
 

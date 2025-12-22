@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { animationConfig } from '@/lib/animations';
 
 interface SidebarProps {
   onLogout?: () => void;
@@ -31,11 +32,13 @@ export default function Sidebar({ onLogout }: SidebarProps) {
   // 精确匹配当前路径
   const getActiveHref = useCallback((currentPath: string) => {
     // 精确匹配
-    const exactMatch = menuItems.find(item => item.href === currentPath);
+    const exactMatch = menuItems.find((item) => item.href === currentPath);
     if (exactMatch) return exactMatch.href;
 
     // 前缀匹配（处理子路径）
-    const prefixMatch = menuItems.find(item => currentPath.startsWith(item.href));
+    const prefixMatch = menuItems.find((item) =>
+      currentPath.startsWith(item.href)
+    );
     return prefixMatch ? prefixMatch.href : '';
   }, []);
 
@@ -57,26 +60,35 @@ export default function Sidebar({ onLogout }: SidebarProps) {
   const activeHref = getActualActiveHref();
 
   // 判断是否激活
-  const isActive = useCallback((href: string) => {
-    return activeHref === href;
-  }, [activeHref]);
+  const isActive = useCallback(
+    (href: string) => {
+      return activeHref === href;
+    },
+    [activeHref]
+  );
 
   // 判断是否加载中
-  const isLoading = useCallback((href: string) => loadingHref === href, [loadingHref]);
+  const isLoading = useCallback(
+    (href: string) => loadingHref === href,
+    [loadingHref]
+  );
 
   // 处理菜单点击
-  const handleMenuClick = useCallback((href: string) => {
-    return (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.preventDefault();
+  const handleMenuClick = useCallback(
+    (href: string) => {
+      return (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
 
-      // 设置点击锁定状态
-      setClickLocked(true);
-      setLoadingHref(href);
+        // 设置点击锁定状态
+        setClickLocked(true);
+        setLoadingHref(href);
 
-      // 跳转到新页面
-      router.push(href);
-    };
-  }, [router]);
+        // 跳转到新页面
+        router.push(href);
+      };
+    },
+    [router]
+  );
 
   // 当 pathname 变化时，设置点击锁定状态
   useEffect(() => {
@@ -149,12 +161,15 @@ export default function Sidebar({ onLogout }: SidebarProps) {
     <motion.div
       className="h-screen sticky top-0"
       animate={{
-        width: isCollapsed ? 80 : 256
+        width: isCollapsed
+          ? animationConfig.sidebar.collapsedWidth
+          : animationConfig.sidebar.expandedWidth,
       }}
       transition={{
-        duration: 0.3,
-        ease: "easeInOut"
+        duration: animationConfig.sidebar.width.duration / 1000,
+        ease: animationConfig.sidebar.width.ease,
       }}
+      style={{ willChange: 'width' }}
     >
       <div className="h-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-r-xl flex flex-col">
         {/* 头部区域 */}
@@ -171,8 +186,12 @@ export default function Sidebar({ onLogout }: SidebarProps) {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               animate={{ rotate: isCollapsed ? 180 : 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              aria-label={isCollapsed ? "展开菜单" : "收起菜单"}
+              transition={{
+                duration:
+                  animationConfig.sidebar.collapseButton.rotate.duration / 1000,
+                ease: animationConfig.sidebar.collapseButton.rotate.ease,
+              }}
+              aria-label={isCollapsed ? '展开菜单' : '收起菜单'}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -201,15 +220,27 @@ export default function Sidebar({ onLogout }: SidebarProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{
-                    duration: 0.3,
-                    delay: index * 0.05,
-                    ease: "easeInOut"
+                    duration:
+                      animationConfig.sidebar.menuItem.enter.duration / 1000,
+                    delay:
+                      index *
+                      animationConfig.sidebar.menuItem.enter.staggerDelay,
+                    ease: animationConfig.sidebar.menuItem.enter.ease,
                   }}
                   whileHover={{
-                    scale: 1.02,
-                    transition: { duration: 0.2 }
+                    scale: animationConfig.sidebar.menuItem.hover.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.hover.duration / 1000,
+                    },
                   }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{
+                    scale: animationConfig.sidebar.menuItem.tap.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.tap.duration / 1000,
+                    },
+                  }}
                 >
                   <a
                     href={item.href}
@@ -262,8 +293,20 @@ export default function Sidebar({ onLogout }: SidebarProps) {
                 <motion.button
                   onClick={() => router.push('/')}
                   className="flex items-center justify-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 touch-manipulation"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{
+                    scale: animationConfig.sidebar.menuItem.hover.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.hover.duration / 1000,
+                    },
+                  }}
+                  whileTap={{
+                    scale: animationConfig.sidebar.menuItem.tap.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.tap.duration / 1000,
+                    },
+                  }}
                 >
                   返回主页
                 </motion.button>
@@ -274,8 +317,20 @@ export default function Sidebar({ onLogout }: SidebarProps) {
                     }
                   }}
                   className="flex items-center justify-center px-4 py-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors duration-200 touch-manipulation"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{
+                    scale: animationConfig.sidebar.menuItem.hover.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.hover.duration / 1000,
+                    },
+                  }}
+                  whileTap={{
+                    scale: animationConfig.sidebar.menuItem.tap.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.tap.duration / 1000,
+                    },
+                  }}
                 >
                   退出登录
                 </motion.button>
@@ -287,8 +342,20 @@ export default function Sidebar({ onLogout }: SidebarProps) {
                   onClick={() => router.push('/')}
                   className="p-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 touch-manipulation flex items-center justify-center"
                   title="返回主页"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileHover={{
+                    scale: animationConfig.sidebar.menuItem.hover.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.hover.duration / 1000,
+                    },
+                  }}
+                  whileTap={{
+                    scale: animationConfig.sidebar.menuItem.tap.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.tap.duration / 1000,
+                    },
+                  }}
                   aria-label="返回主页"
                 >
                   <svg
@@ -308,8 +375,20 @@ export default function Sidebar({ onLogout }: SidebarProps) {
                   }}
                   className="p-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors duration-200 touch-manipulation flex items-center justify-center"
                   title="退出登录"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileHover={{
+                    scale: animationConfig.sidebar.menuItem.hover.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.hover.duration / 1000,
+                    },
+                  }}
+                  whileTap={{
+                    scale: animationConfig.sidebar.menuItem.tap.scale,
+                    transition: {
+                      duration:
+                        animationConfig.sidebar.menuItem.tap.duration / 1000,
+                    },
+                  }}
                   aria-label="退出登录"
                 >
                   <svg
