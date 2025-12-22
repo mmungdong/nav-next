@@ -197,6 +197,13 @@
         "url": "https://chatgpt.com",
         "icon": "",
         "index": null
+      },
+      {
+        "id": 1766380939636,
+        "name": "Cloude Code - Aitmpl",
+        "desc": "提供关于 Cloude Code 的一些 agents，skills，plugins and mcps.",
+        "url": "https://www.aitmpl.com/",
+        "icon": "https://www.google.com/s2/favicons?domain=www.aitmpl.com"
       }
     ]
   },
