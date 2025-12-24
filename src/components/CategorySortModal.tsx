@@ -61,10 +61,10 @@ export default function CategorySortModal({
         onClick={onClose}
       ></div>
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto pointer-events-auto"
+        className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-white/30 dark:border-gray-700/50 pointer-events-auto custom-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-between items-center">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
             分类排序
           </h3>
@@ -94,7 +94,7 @@ export default function CategorySortModal({
               拖拽分类来调整显示顺序
             </p>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
               {sortedCategories.map((category, index) => (
                 <div
                   key={category.id}
@@ -102,38 +102,42 @@ export default function CategorySortModal({
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, index)}
-                  className="p-4 rounded-lg cursor-move bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                  className="p-4 rounded-xl cursor-move bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 hover:bg-white/70 dark:hover:bg-gray-700/70 flex items-center transition-all duration-200"
                 >
-                  <div className="flex-shrink-0 mr-3 cursor-move">
-                    <svg
-                      className="h-5 w-5 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8h16M4 16h16"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-2xl mr-3">{category.icon}</span>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 dark:text-white">
-                      {category.title}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {category.nav.length} 个网站
-                    </p>
+                  <div className="flex items-center w-full">
+                    <div className="flex-shrink-0 mr-3 cursor-move">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 8h16M4 16h16"
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-shrink-0 mr-3">
+                      <span className="text-2xl">{category.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                        {category.title}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {category.nav.length} 个网站
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 flex justify-end space-x-3 rounded-b-xl">
+          <div className="px-6 py-4 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm flex justify-end space-x-3 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}
