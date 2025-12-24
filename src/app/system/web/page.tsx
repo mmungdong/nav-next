@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import DefaultIcon, { isIconUrlFailed } from '@/components/DefaultIcon';
 import Image from 'next/image';
@@ -13,6 +13,9 @@ import CategorySortModal from '@/components/CategorySortModal';
 import WebsiteSortModal from '@/components/WebsiteSortModal';
 import { useAuthStore } from '@/stores/authStore';
 import { updateFileContent, getFileContent } from '@/lib/githubApi';
+import MessageDisplay from '@/components/MessageDisplay';
+import DataCompareModal from '@/components/DataCompareModal'; // 新增：数据比较模态框
+import { DataDiffResult } from '@/stores/navStore'; // 新增：导入差异结果类型
 
 export default function WebManagementPage() {
   const {
@@ -21,6 +24,10 @@ export default function WebManagementPage() {
     fetchCategories,
     saveCategories,
     getLastSyncTime,
+    checkDataSync, // 添加数据同步检查函数
+    fetchRemoteData, // 添加获取远程数据函数
+    hasDataChanged, // 添加数据比较函数
+    compareData, // 添加数据差异比较函数
   } = useNavStore();
   const { githubToken } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,69 +56,40 @@ export default function WebManagementPage() {
   const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(
     null
   );
-  const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [message, setMessage] = useState<{
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'loading';
     text: string;
   } | null>(null);
+  const [isMessageVisible, setIsMessageVisible] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showSyncNotification, setShowSyncNotification] = useState(false); // 新增：显示同步通知状态
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null); // 新增：同步检查定时器引用
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false); // 新增：比较模态框状态
+  const [diffResult, setDiffResult] = useState<DataDiffResult | null>(null); // 新增：差异结果状态
+
+  // 防抖函数
+  const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(null, args), delay);
+    };
+  };
+
+  // 防抖版本的fetchCategories
+  const debouncedFetchCategories = useCallback(
+    debounce(() => {
+      fetchCategories();
+    }, 300), // 300ms 防抖延迟
+    [fetchCategories]
+  );
+  const hasInitialized = useRef(false);
   const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
   const [sortingCategory, setSortingCategory] = useState<ICategory | null>(
     null
   );
   const [isWebsiteSortModalOpen, setIsWebsiteSortModalOpen] = useState(false);
-
-  // 消息展示组件
-  const MessageDisplay = () => {
-    if (!message) return null;
-
-    return (
-      <div
-        className={`mb-4 p-4 rounded-lg ${
-          message.type === 'success'
-            ? 'bg-green-100 text-green-800 border border-green-200'
-            : 'bg-red-100 text-red-800 border border-red-200'
-        }`}
-      >
-        <div className="flex items-start">
-          {message.type === 'success' ? (
-            <svg
-              className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M5 13l4 4L19 7"
-              ></path>
-            </svg>
-          ) : (
-            <svg
-              className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              ></path>
-            </svg>
-          )}
-          <div>
-            {message.text.split('\n').map((line, index) => (
-              <div key={index}>{line}</div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // 编辑网站
   const handleEditWebsite = (website: IWebsite) => {
@@ -153,17 +131,17 @@ export default function WebManagementPage() {
       const currentTime = new Date().toISOString();
       setLastSyncTime(currentTime);
 
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        await syncToGitHub(updatedCategories);
-      }
-
+      // 关闭modal
       setIsEditModalOpen(false);
       setEditingWebsite(undefined);
     } catch (error) {
       console.error('保存网站失败:', error);
-      setMessage({ type: 'error', text: '保存失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '保存网站失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
@@ -197,18 +175,18 @@ export default function WebManagementPage() {
       const currentTime = new Date().toISOString();
       setLastSyncTime(currentTime);
 
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        await syncToGitHub(updatedCategories);
-      }
-
+      // 关闭modal
       setIsDeleteModalOpen(false);
       setDeletingWebsite(null);
       setSelectedCategory(null);
     } catch (error) {
       console.error('删除网站失败:', error);
-      setMessage({ type: 'error', text: '删除失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '删除网站失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
@@ -264,17 +242,17 @@ export default function WebManagementPage() {
       const currentTime = new Date().toISOString();
       setLastSyncTime(currentTime);
 
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        await syncToGitHub(updatedCategories);
-      }
-
+      // 关闭modal
       setIsEditCategoryModalOpen(false);
       setEditingCategory(undefined);
     } catch (error) {
       console.error('保存分类失败:', error);
-      setMessage({ type: 'error', text: '保存失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '保存分类失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
@@ -310,8 +288,12 @@ export default function WebManagementPage() {
       setDeletingCategory(null);
     } catch (error) {
       console.error('删除分类失败:', error);
-      setMessage({ type: 'error', text: '删除失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '删除分类失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
@@ -325,18 +307,16 @@ export default function WebManagementPage() {
       const currentTime = new Date().toISOString();
       setLastSyncTime(currentTime);
 
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        await syncToGitHub(sortedCategories);
-      }
-
+      // 关闭modal
       setIsCategorySortModalOpen(false);
-      setMessage({ type: 'success', text: '分类排序已保存！' });
-      setTimeout(() => setMessage(null), 5000);
     } catch (error) {
       console.error('保存分类排序失败:', error);
-      setMessage({ type: 'error', text: '保存排序失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '保存分类排序失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
@@ -361,19 +341,17 @@ export default function WebManagementPage() {
       const currentTime = new Date().toISOString();
       setLastSyncTime(currentTime);
 
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        await syncToGitHub(updatedCategories);
-      }
-
+      // 关闭modal
       setIsWebsiteSortModalOpen(false);
       setSortingCategory(null);
-      setMessage({ type: 'success', text: '网站排序已保存！' });
-      setTimeout(() => setMessage(null), 5000);
     } catch (error) {
       console.error('保存网站排序失败:', error);
-      setMessage({ type: 'error', text: '保存排序失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '保存网站排序失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
@@ -420,74 +398,137 @@ export default function WebManagementPage() {
 
       // 如果有GitHub Token，同步到GitHub
       if (githubToken) {
-        await syncToGitHub(updatedCategories);
-      }
+        // 关闭所有modal框，避免用户多次点击
+        setIsMoveModalOpen(false);
+        setMovingWebsite(undefined);
+        setSelectedCategory(null);
 
-      setIsMoveModalOpen(false);
-      setMovingWebsite(undefined);
-      setSelectedCategory(null);
+        await syncToGitHub(updatedCategories);
+      } else {
+        // 如果没有GitHub Token，仍然关闭modal
+        setIsMoveModalOpen(false);
+        setMovingWebsite(undefined);
+        setSelectedCategory(null);
+      }
     } catch (error) {
       console.error('移动网站失败:', error);
-      setMessage({ type: 'error', text: '移动失败，请重试' });
-      setTimeout(() => setMessage(null), 5000);
+      // 如果同步失败，显示错误信息
+      setMessage({ type: 'error', text: '移动网站失败，请重试' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
     }
   };
 
-  // 同步到GitHub
-  const syncToGitHub = async (updatedCategories: ICategory[]) => {
+  // 同步到GitHub - 双向同步
+  const syncToGitHub = async (
+    updatedCategories: ICategory[],
+    direction: 'push' | 'pull' | 'auto' = 'auto'
+  ) => {
     if (!githubToken) return;
 
     try {
-      // 获取文件信息（需要SHA来更新文件）
-      const owner = 'mmungdong'; // 替换为实际的仓库所有者
-      const repo = 'nav-next'; // 替换为实际的仓库名
-      const path = 'public/data/db.json';
-      const branch = 'main';
+      // 显示加载状态全屏覆盖
+      setMessage({ type: 'loading', text: '正在同步数据...' });
+      setIsMessageVisible(true);
 
-      // 获取当前文件的SHA
-      const fileInfo = await getFileContent(
-        githubToken,
-        owner,
-        repo,
-        path,
-        branch
-      );
+      // 获取远程数据
+      const remoteData = await fetchRemoteData(githubToken);
 
-      // 准备文件内容
-      const content = JSON.stringify(updatedCategories, null, 2);
+      if (direction === 'pull' || (direction === 'auto' && remoteData)) {
+        // 拉取模式：从远程获取数据并更新本地
+        if (remoteData) {
+          // 比较本地和远程数据
+          const hasChanged = hasDataChanged(categories, remoteData);
 
-      // 更新或创建文件
-      await updateFileContent(
-        githubToken,
-        owner,
-        repo,
-        path,
-        content,
-        `Update website data: ${new Date().toISOString()}`,
-        branch,
-        fileInfo.sha || undefined // 如果文件不存在，sha为undefined
-      );
+          if (hasChanged) {
+            // 远程数据有更新，询问用户是否同步
+            if (direction === 'auto') {
+              // 在实际应用中，这里应该弹出确认对话框
+              // 现在我们自动同步
+              await saveCategories(remoteData);
+              // 更新最后同步时间状态为当前时间
+              const currentTime = new Date().toISOString();
+              setLastSyncTime(currentTime);
+
+              // 显示成功信息
+              setMessage({ type: 'success', text: '远程数据已同步到本地！' });
+              setTimeout(() => {
+                setMessage(null);
+                setIsMessageVisible(false);
+              }, 2000);
+              return;
+            } else if (direction === 'pull') {
+              await saveCategories(remoteData);
+              // 更新最后同步时间状态为当前时间
+              const currentTime = new Date().toISOString();
+              setLastSyncTime(currentTime);
+
+              // 显示成功信息
+              setMessage({ type: 'success', text: '远程数据已同步到本地！' });
+              setTimeout(() => {
+                setMessage(null);
+                setIsMessageVisible(false);
+              }, 2000);
+              return;
+            }
+          } else {
+            // 数据没有变化
+            setMessage({ type: 'success', text: '数据已是最新，无需同步' });
+            setTimeout(() => {
+              setMessage(null);
+              setIsMessageVisible(false);
+            }, 2000);
+            return;
+          }
+        }
+      }
+
+      if (
+        direction === 'push' ||
+        (direction === 'auto' &&
+          (!remoteData || hasDataChanged(categories, remoteData)))
+      ) {
+        // 推送模式：将本地数据推送到远程
+        const owner = 'mmungdong'; // 替换为实际的仓库所有者
+        const repo = 'nav-next'; // 替换为实际的仓库名
+        const path = 'public/data/db.json';
+        const branch = 'main';
+
+        // 获取当前文件的SHA
+        const fileInfo = await getFileContent(
+          githubToken,
+          owner,
+          repo,
+          path,
+          branch
+        );
+
+        // 准备文件内容
+        const content = JSON.stringify(updatedCategories, null, 2);
+
+        // 更新或创建文件
+        await updateFileContent(
+          githubToken,
+          owner,
+          repo,
+          path,
+          content,
+          `Update website data: ${new Date().toISOString()}`,
+          branch,
+          fileInfo.sha || undefined // 如果文件不存在，sha为undefined
+        );
+
+        // 显示成功信息
+        setMessage({ type: 'success', text: '数据已成功同步到远程仓库！' });
+        setTimeout(() => {
+          setMessage(null);
+          setIsMessageVisible(false);
+        }, 2000);
+      }
     } catch (error) {
       console.error('同步到GitHub失败:', error);
-      // 将错误信息传递给调用者
-      throw new Error((error as Error).message || '同步到GitHub失败');
-    }
-  };
-
-  // 手动同步到远程
-  const handleSyncToRemote = async () => {
-    if (!githubToken || isSyncing) return;
-
-    setIsSyncing(true);
-    try {
-      await syncToGitHub(categories);
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-      setMessage({ type: 'success', text: '数据已成功同步到远程仓库！' });
-      setTimeout(() => setMessage(null), 5000);
-    } catch (error) {
-      console.error('同步失败:', error);
       let errorMessage = (error as Error).message || '未知错误';
 
       // 为私有仓库问题提供更明确的指导
@@ -499,19 +540,284 @@ export default function WebManagementPage() {
           '。请确保：\n1. GitHub Token具有完整的repo权限\n2. 您对私有仓库有访问权限\n3. 如果属于组织，检查是否需要SSO授权';
       }
 
+      // 显示错误信息
       setMessage({ type: 'error', text: `同步失败: ${errorMessage}` });
-      setTimeout(() => setMessage(null), 10000); // 私有仓库问题显示更长时间
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+
+      // 将错误信息传递给调用者
+      throw new Error(errorMessage);
+    }
+  };
+
+  // 手动同步到远程 - 改为双向同步
+  const handleSyncToRemote = async () => {
+    if (!githubToken || isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      // 使用自动模式进行双向同步
+      await syncToGitHub(categories, 'auto');
+      // 更新最后同步时间状态为当前时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+    } catch (error) {
+      console.error('同步失败:', error);
+      // 错误已经在syncToGitHub中处理了
     } finally {
       setIsSyncing(false);
     }
   };
 
+  // 从远程拉取数据
+  const handlePullFromRemote = async () => {
+    if (!githubToken || isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      await syncToGitHub(categories, 'pull');
+    } catch (error) {
+      console.error('拉取数据失败:', error);
+      // 错误已经在syncToGitHub中处理了
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // 清理未使用的变量和函数
+
+  // 检查本地和远程数据是否同步
+  const checkSyncStatus = async () => {
+    if (!githubToken) return true; // 没有GitHub Token则跳过检查
+
+    try {
+      const isSynced = await checkDataSync(githubToken);
+
+      if (!isSynced) {
+        // 数据不同步，显示通知
+        setShowSyncNotification(true);
+        setMessage({
+          type: 'error',
+          text: '检测到远程数据有更新，请同步您的本地数据',
+        });
+        setTimeout(() => {
+          setMessage(null);
+          setIsMessageVisible(false);
+        }, 5000);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('检查同步状态失败:', error);
+      return true; // 出错时继续执行
+    }
+  };
+
+  // 比较本地和远程数据的差异
+  const handleCompareData = async () => {
+    if (!githubToken) {
+      setMessage({ type: 'error', text: '请先配置GitHub Token' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+      return;
+    }
+
+    try {
+      // 显示加载状态
+      setMessage({ type: 'loading', text: '正在比较数据差异...' });
+      setIsMessageVisible(true);
+
+      // 获取远程数据
+      const remoteData = await fetchRemoteData(githubToken);
+      if (!remoteData) {
+        setMessage({ type: 'error', text: '无法获取远程数据' });
+        setTimeout(() => {
+          setMessage(null);
+          setIsMessageVisible(false);
+        }, 5000);
+        return;
+      }
+
+      // 比较本地和远程数据
+      const localData = categories;
+      const diff = compareData(localData, remoteData);
+
+      // 设置差异结果并打开模态框
+      setDiffResult(diff);
+      setIsCompareModalOpen(true);
+
+      // 隐藏加载状态
+      setMessage(null);
+      setIsMessageVisible(false);
+    } catch (error) {
+      console.error('比较数据失败:', error);
+      setMessage({
+        type: 'error',
+        text: '比较数据失败: ' + (error as Error).message,
+      });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+    }
+  };
+
+  // 使用远程配置 - 删除本地配置并刷新页面
+  const handleUseRemoteConfig = async () => {
+    if (!githubToken) {
+      setMessage({ type: 'error', text: '请先配置GitHub Token' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+      return;
+    }
+
+    try {
+      // 显示加载状态
+      setMessage({ type: 'loading', text: '正在获取远程配置...' });
+      setIsMessageVisible(true);
+
+      // 获取远程数据
+      const remoteData = await fetchRemoteData(githubToken);
+      if (!remoteData) {
+        setMessage({ type: 'error', text: '无法获取远程数据' });
+        setTimeout(() => {
+          setMessage(null);
+          setIsMessageVisible(false);
+        }, 5000);
+        return;
+      }
+
+      // 保存远程数据到本地存储
+      await saveCategories(remoteData);
+
+      // 更新状态
+      // 注意：我们不再调用全局的fetchCategories，而是直接更新状态
+      // 使用navStore的updateCategories方法更新状态
+      // 注意：需要从useNavStore中解构updateCategories
+      // 如果updateCategories不存在，我们使用saveCategories，它也会更新状态
+
+      // 更新最后同步时间
+      const currentTime = new Date().toISOString();
+      setLastSyncTime(currentTime);
+
+      // 关闭模态框
+      setIsCompareModalOpen(false);
+
+      // 显示成功消息
+      setMessage({ type: 'success', text: '已使用远程配置并刷新页面' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+
+        // 刷新页面以应用新配置
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('使用远程配置失败:', error);
+      setMessage({
+        type: 'error',
+        text: '使用远程配置失败: ' + (error as Error).message,
+      });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+    }
+  };
+
+  // 同步本地配置到远程
+  const handleSyncToLocalRemote = async () => {
+    if (!githubToken) {
+      setMessage({ type: 'error', text: '请先配置GitHub Token' });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+      return;
+    }
+
+    try {
+      // 显示加载状态
+      setMessage({ type: 'loading', text: '正在同步到远程...' });
+      setIsMessageVisible(true);
+
+      // 使用现有的同步功能，将本地数据同步到远程
+      await syncToGitHub(categories, 'push');
+
+      // 关闭模态框
+      setIsCompareModalOpen(false);
+
+      // 检查是否有错误消息
+      if (message?.type !== 'error') {
+        // 如果没有错误，设置成功消息
+        setMessage({ type: 'success', text: '已同步本地配置到远程' });
+        setTimeout(() => {
+          setMessage(null);
+          setIsMessageVisible(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('同步到远程失败:', error);
+      setMessage({
+        type: 'error',
+        text: '同步到远程失败: ' + (error as Error).message,
+      });
+      setTimeout(() => {
+        setMessage(null);
+        setIsMessageVisible(false);
+      }, 5000);
+    }
+  };
+
+  // 设置定时检查同步状态
+  useEffect(() => {
+    if (githubToken) {
+      // 每30分钟检查一次数据同步状态
+      const interval = setInterval(
+        () => {
+          checkSyncStatus();
+        },
+        30 * 60 * 1000
+      ); // 30分钟 = 1800000毫秒
+
+      // 保存定时器引用以便清理
+      syncIntervalRef.current = interval;
+
+      // 初始检查
+      checkSyncStatus();
+
+      // 清理定时器
+      return () => {
+        if (syncIntervalRef.current) {
+          clearInterval(syncIntervalRef.current);
+        }
+      };
+    } else {
+      // 如果没有GitHub Token，清理定时器
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+    }
+  }, [githubToken]);
+
   useEffect(() => {
     fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
     // 获取最后同步时间
     const lastSync = getLastSyncTime();
-    setLastSyncTime(lastSync);
-  }, [fetchCategories, getLastSyncTime]);
+    if (lastSync) {
+      setLastSyncTime(lastSync);
+    }
+  }, [getLastSyncTime]);
 
   // 使用原始分类顺序，不进行额外排序
   const sortedCategories = categories;
@@ -561,7 +867,7 @@ export default function WebManagementPage() {
 
   return (
     <div>
-      <MessageDisplay />
+      <MessageDisplay message={message} isMessageVisible={isMessageVisible} />
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -575,13 +881,29 @@ export default function WebManagementPage() {
         </div>
         <div className="flex space-x-2">
           {githubToken && (
-            <button
-              className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={handleSyncToRemote}
-              disabled={isSyncing}
-            >
-              {isSyncing ? '同步中...' : '更新到远程'}
-            </button>
+            <>
+              <button
+                className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={handleSyncToRemote}
+                disabled={isSyncing}
+              >
+                {isSyncing ? '同步中...' : '双向同步'}
+              </button>
+              <button
+                className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={handlePullFromRemote}
+                disabled={isSyncing}
+              >
+                {isSyncing ? '拉取中...' : '从远程拉取'}
+              </button>
+              <button
+                className={`bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={handleCompareData}
+                disabled={isSyncing}
+              >
+                {isSyncing ? '比较中...' : '比较差异'}
+              </button>
+            </>
           )}
           <button
             className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors"
@@ -1062,6 +1384,15 @@ export default function WebManagementPage() {
           setSortingCategory(null);
         }}
         onSave={handleSaveWebsiteSort}
+      />
+
+      {/* 数据比较模态框 */}
+      <DataCompareModal
+        diffResult={diffResult}
+        isOpen={isCompareModalOpen}
+        onClose={() => setIsCompareModalOpen(false)}
+        onUseRemote={handleUseRemoteConfig}
+        onSyncToRemote={handleSyncToLocalRemote}
       />
     </div>
   );
