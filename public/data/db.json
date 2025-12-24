@@ -86,20 +86,6 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
-      },
-      {
-        "id": 1070,
-        "name": "Openlist",
-        "desc": "",
-        "url": "https://openlist.yangfanbin.cn",
-        "icon": "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.png",
-        "tags": [],
-        "rate": 5,
-        "top": true,
-        "ownVisible": false,
-        "topTypes": [
-          1
-        ]
       }
     ]
   },
@@ -147,6 +133,20 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
+      },
+      {
+        "id": 1070,
+        "name": "Openlist",
+        "desc": "",
+        "url": "https://openlist.yangfanbin.cn",
+        "icon": "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.png",
+        "tags": [],
+        "rate": 5,
+        "top": true,
+        "ownVisible": false,
+        "topTypes": [
+          1
+        ]
       }
     ]
   },
