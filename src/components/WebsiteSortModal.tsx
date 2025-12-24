@@ -58,7 +58,7 @@ export default function WebsiteSortModal({
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
       <div
-        className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm pointer-events-auto"
+        className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm pointer-events-auto"
         onClick={onClose}
       ></div>
       <div
