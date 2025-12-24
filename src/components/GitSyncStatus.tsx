@@ -114,8 +114,10 @@ export default function GitSyncStatus() {
   };
 
   const getStatusColor = () => {
-    if (loading) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
-    if (error || !status) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+    if (loading)
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+    if (error || !status)
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
 
     if (status.localChanges || status.remoteChanges) {
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
@@ -153,26 +155,43 @@ export default function GitSyncStatus() {
 
           <div className="mt-3 text-xs space-y-1 opacity-90">
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className={`p-2 rounded ${status?.localChanges ? 'bg-yellow-200/50 dark:bg-yellow-900/30' : 'bg-gray-200/30 dark:bg-gray-700/30'}`}>
+              <div
+                className={`p-2 rounded ${status?.localChanges ? 'bg-yellow-200/50 dark:bg-yellow-900/30' : 'bg-gray-200/30 dark:bg-gray-700/30'}`}
+              >
                 <div className="font-semibold">本地</div>
-                <div className="text-xs">{status?.localChanges ? '有更改' : '同步'}</div>
+                <div className="text-xs">
+                  {status?.localChanges ? '有更改' : '同步'}
+                </div>
               </div>
-              <div className={`p-2 rounded ${status?.isSynced ? 'bg-green-200/50 dark:bg-green-900/30' : 'bg-yellow-200/50 dark:bg-yellow-900/30'}`}>
+              <div
+                className={`p-2 rounded ${status?.isSynced ? 'bg-green-200/50 dark:bg-green-900/30' : 'bg-yellow-200/50 dark:bg-yellow-900/30'}`}
+              >
                 <div className="font-semibold">状态</div>
-                <div className="text-xs">{status?.isSynced ? '同步' : '不同步'}</div>
+                <div className="text-xs">
+                  {status?.isSynced ? '同步' : '不同步'}
+                </div>
               </div>
-              <div className={`p-2 rounded ${status?.remoteChanges ? 'bg-blue-200/50 dark:bg-blue-900/30' : 'bg-gray-200/30 dark:bg-gray-700/30'}`}>
+              <div
+                className={`p-2 rounded ${status?.remoteChanges ? 'bg-blue-200/50 dark:bg-blue-900/30' : 'bg-gray-200/30 dark:bg-gray-700/30'}`}
+              >
                 <div className="font-semibold">远程</div>
-                <div className="text-xs">{status?.remoteChanges ? '有更新' : '最新'}</div>
+                <div className="text-xs">
+                  {status?.remoteChanges ? '有更新' : '最新'}
+                </div>
               </div>
             </div>
 
             <div className="text-xs opacity-70 mt-2">
-              最后检查: {status ? new Date(status.lastSyncCheck).toLocaleTimeString() : '从未检查'}
+              最后检查:{' '}
+              {status
+                ? new Date(status.lastSyncCheck).toLocaleTimeString()
+                : '从未检查'}
             </div>
 
             <div className="text-xs mt-2 p-2 bg-gray-100/50 dark:bg-gray-800/50 rounded">
-              提示: 在静态部署中，此功能仅能检测远程仓库更新。本地更改需通过命令行或GitHub Desktop等工具手动同步。
+              提示:
+              在静态部署中，此功能仅能检测远程仓库更新。本地更改需通过命令行或GitHub
+              Desktop等工具手动同步。
             </div>
           </div>
         </motion.div>

@@ -69,21 +69,23 @@ export default function WebManagementPage() {
   const [diffResult, setDiffResult] = useState<DataDiffResult | null>(null); // 新增：差异结果状态
 
   // 防抖函数
-  const debounce = (func: Function, delay: number) => {
+  const debounce = <T extends readonly any[]>(
+    func: (...args: T) => void,
+    delay: number
+  ) => {
     let timeoutId: NodeJS.Timeout;
-    return (...args: any[]) => {
+    return (...args: T): void => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func.apply(null, args), delay);
+      timeoutId = setTimeout(() => func(...args), delay);
     };
   };
 
   // 防抖版本的fetchCategories
-  const debouncedFetchCategories = useCallback(
+  const debouncedFetchCategories = useCallback(() => {
     debounce(() => {
       fetchCategories();
-    }, 300), // 300ms 防抖延迟
-    [fetchCategories]
-  );
+    }, 300)(); // 300ms 防抖延迟
+  }, [fetchCategories]);
   const hasInitialized = useRef(false);
   const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
   const [sortingCategory, setSortingCategory] = useState<ICategory | null>(
@@ -279,11 +281,6 @@ export default function WebManagementPage() {
       const currentTime = new Date().toISOString();
       setLastSyncTime(currentTime);
 
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        await syncToGitHub(updatedCategories);
-      }
-
       setIsDeleteCategoryModalOpen(false);
       setDeletingCategory(null);
     } catch (error) {
@@ -402,8 +399,6 @@ export default function WebManagementPage() {
         setIsMoveModalOpen(false);
         setMovingWebsite(undefined);
         setSelectedCategory(null);
-
-        await syncToGitHub(updatedCategories);
       } else {
         // 如果没有GitHub Token，仍然关闭modal
         setIsMoveModalOpen(false);
@@ -418,171 +413,6 @@ export default function WebManagementPage() {
         setMessage(null);
         setIsMessageVisible(false);
       }, 5000);
-    }
-  };
-
-  // 同步到GitHub - 双向同步
-  const syncToGitHub = async (
-    updatedCategories: ICategory[],
-    direction: 'push' | 'pull' | 'auto' = 'auto'
-  ) => {
-    if (!githubToken) return;
-
-    try {
-      // 显示加载状态全屏覆盖
-      setMessage({ type: 'loading', text: '正在同步数据...' });
-      setIsMessageVisible(true);
-
-      // 获取远程数据
-      const remoteData = await fetchRemoteData(githubToken);
-
-      if (direction === 'pull' || (direction === 'auto' && remoteData)) {
-        // 拉取模式：从远程获取数据并更新本地
-        if (remoteData) {
-          // 比较本地和远程数据
-          const hasChanged = hasDataChanged(categories, remoteData);
-
-          if (hasChanged) {
-            // 远程数据有更新，询问用户是否同步
-            if (direction === 'auto') {
-              // 在实际应用中，这里应该弹出确认对话框
-              // 现在我们自动同步
-              await saveCategories(remoteData);
-              // 更新最后同步时间状态为当前时间
-              const currentTime = new Date().toISOString();
-              setLastSyncTime(currentTime);
-
-              // 显示成功信息
-              setMessage({ type: 'success', text: '远程数据已同步到本地！' });
-              setTimeout(() => {
-                setMessage(null);
-                setIsMessageVisible(false);
-              }, 2000);
-              return;
-            } else if (direction === 'pull') {
-              await saveCategories(remoteData);
-              // 更新最后同步时间状态为当前时间
-              const currentTime = new Date().toISOString();
-              setLastSyncTime(currentTime);
-
-              // 显示成功信息
-              setMessage({ type: 'success', text: '远程数据已同步到本地！' });
-              setTimeout(() => {
-                setMessage(null);
-                setIsMessageVisible(false);
-              }, 2000);
-              return;
-            }
-          } else {
-            // 数据没有变化
-            setMessage({ type: 'success', text: '数据已是最新，无需同步' });
-            setTimeout(() => {
-              setMessage(null);
-              setIsMessageVisible(false);
-            }, 2000);
-            return;
-          }
-        }
-      }
-
-      if (
-        direction === 'push' ||
-        (direction === 'auto' &&
-          (!remoteData || hasDataChanged(categories, remoteData)))
-      ) {
-        // 推送模式：将本地数据推送到远程
-        const owner = 'mmungdong'; // 替换为实际的仓库所有者
-        const repo = 'nav-next'; // 替换为实际的仓库名
-        const path = 'public/data/db.json';
-        const branch = 'main';
-
-        // 获取当前文件的SHA
-        const fileInfo = await getFileContent(
-          githubToken,
-          owner,
-          repo,
-          path,
-          branch
-        );
-
-        // 准备文件内容
-        const content = JSON.stringify(updatedCategories, null, 2);
-
-        // 更新或创建文件
-        await updateFileContent(
-          githubToken,
-          owner,
-          repo,
-          path,
-          content,
-          `Update website data: ${new Date().toISOString()}`,
-          branch,
-          fileInfo.sha || undefined // 如果文件不存在，sha为undefined
-        );
-
-        // 显示成功信息
-        setMessage({ type: 'success', text: '数据已成功同步到远程仓库！' });
-        setTimeout(() => {
-          setMessage(null);
-          setIsMessageVisible(false);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('同步到GitHub失败:', error);
-      let errorMessage = (error as Error).message || '未知错误';
-
-      // 为私有仓库问题提供更明确的指导
-      if (
-        errorMessage.includes('无法访问私有仓库') ||
-        errorMessage.includes('Resource not accessible')
-      ) {
-        errorMessage +=
-          '。请确保：\n1. GitHub Token具有完整的repo权限\n2. 您对私有仓库有访问权限\n3. 如果属于组织，检查是否需要SSO授权';
-      }
-
-      // 显示错误信息
-      setMessage({ type: 'error', text: `同步失败: ${errorMessage}` });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-
-      // 将错误信息传递给调用者
-      throw new Error(errorMessage);
-    }
-  };
-
-  // 手动同步到远程 - 改为双向同步
-  const handleSyncToRemote = async () => {
-    if (!githubToken || isSyncing) return;
-
-    setIsSyncing(true);
-    try {
-      // 使用自动模式进行双向同步
-      await syncToGitHub(categories, 'auto');
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-    } catch (error) {
-      console.error('同步失败:', error);
-      // 错误已经在syncToGitHub中处理了
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // 从远程拉取数据
-  const handlePullFromRemote = async () => {
-    if (!githubToken || isSyncing) return;
-
-    setIsSyncing(true);
-    try {
-      await syncToGitHub(categories, 'pull');
-    } catch (error) {
-      console.error('拉取数据失败:', error);
-      // 错误已经在syncToGitHub中处理了
-    } finally {
-      setIsSyncing(false);
     }
   };
 
@@ -747,8 +577,35 @@ export default function WebManagementPage() {
       setMessage({ type: 'loading', text: '正在同步到远程...' });
       setIsMessageVisible(true);
 
-      // 使用现有的同步功能，将本地数据同步到远程
-      await syncToGitHub(categories, 'push');
+      // 推送模式：将本地数据推送到远程
+      const owner = 'mmungdong'; // 替换为实际的仓库所有者
+      const repo = 'nav-next'; // 替换为实际的仓库名
+      const path = 'public/data/db.json';
+      const branch = 'main';
+
+      // 获取当前文件的SHA
+      const fileInfo = await getFileContent(
+        githubToken,
+        owner,
+        repo,
+        path,
+        branch
+      );
+
+      // 准备文件内容
+      const content = JSON.stringify(categories, null, 2);
+
+      // 更新或创建文件
+      await updateFileContent(
+        githubToken,
+        owner,
+        repo,
+        path,
+        content,
+        `Update website data: ${new Date().toISOString()}`,
+        branch,
+        fileInfo.sha || undefined // 如果文件不存在，sha为undefined
+      );
 
       // 关闭模态框
       setIsCompareModalOpen(false);
@@ -764,9 +621,20 @@ export default function WebManagementPage() {
       }
     } catch (error) {
       console.error('同步到远程失败:', error);
+      let errorMessage = (error as Error).message || '未知错误';
+
+      // 为私有仓库问题提供更明确的指导
+      if (
+        errorMessage.includes('无法访问私有仓库') ||
+        errorMessage.includes('Resource not accessible')
+      ) {
+        errorMessage +=
+          '。请确保：\n1. GitHub Token具有完整的repo权限\n2. 您对私有仓库有访问权限\n3. 如果属于组织，检查是否需要SSO授权';
+      }
+
       setMessage({
         type: 'error',
-        text: '同步到远程失败: ' + (error as Error).message,
+        text: '同步到远程失败: ' + errorMessage,
       });
       setTimeout(() => {
         setMessage(null);
@@ -790,7 +658,10 @@ export default function WebManagementPage() {
       syncIntervalRef.current = interval;
 
       // 初始检查
-      checkSyncStatus();
+      const initialCheck = async () => {
+        await checkSyncStatus();
+      };
+      initialCheck();
 
       // 清理定时器
       return () => {
@@ -805,7 +676,13 @@ export default function WebManagementPage() {
         syncIntervalRef.current = null;
       }
     }
-  }, [githubToken]);
+  }, [
+    githubToken,
+    checkSyncStatus,
+    setShowSyncNotification,
+    setMessage,
+    setIsMessageVisible,
+  ]);
 
   useEffect(() => {
     fetchCategories();
@@ -817,7 +694,7 @@ export default function WebManagementPage() {
     if (lastSync) {
       setLastSyncTime(lastSync);
     }
-  }, [getLastSyncTime]);
+  }, [getLastSyncTime, setLastSyncTime]);
 
   // 使用原始分类顺序，不进行额外排序
   const sortedCategories = categories;
@@ -882,20 +759,6 @@ export default function WebManagementPage() {
         <div className="flex space-x-2">
           {githubToken && (
             <>
-              <button
-                className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={handleSyncToRemote}
-                disabled={isSyncing}
-              >
-                {isSyncing ? '同步中...' : '双向同步'}
-              </button>
-              <button
-                className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={handlePullFromRemote}
-                disabled={isSyncing}
-              >
-                {isSyncing ? '拉取中...' : '从远程拉取'}
-              </button>
               <button
                 className={`bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={handleCompareData}
