@@ -105,47 +105,49 @@ export default function WebsiteSortModal({
                   onDrop={(e) => handleDrop(e, index)}
                   className="p-4 rounded-xl cursor-move bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 hover:bg-white/70 dark:hover:bg-gray-700/70 flex items-center transition-all duration-200"
                 >
-                  <div className="flex-shrink-0 mr-3 cursor-move">
-                    <svg
-                      className="h-5 w-5 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8h16M4 16h16"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                    {website.icon ? (
-                      <Image
-                        src={website.icon}
-                        alt={website.name}
-                        width={24}
-                        height={24}
-                        className="object-contain"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.parentElement!.innerHTML =
-                            '<div className="text-xs">🌐</div>';
-                        }}
-                      />
-                    ) : (
-                      <div className="text-xs">🌐</div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 dark:text-white truncate">
-                      {website.name}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {website.desc}
-                    </p>
+                  <div className="flex items-center w-full">
+                    <div className="flex-shrink-0 mr-3 cursor-move">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 8h16M4 16h16"
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+                      {website.icon ? (
+                        <Image
+                          src={website.icon}
+                          alt={website.name}
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML =
+                              '<div className="text-xs">🌐</div>';
+                          }}
+                        />
+                      ) : (
+                        <div className="text-xs">🌐</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                        {website.name}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {website.desc}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -104,29 +104,33 @@ export default function CategorySortModal({
                   onDrop={(e) => handleDrop(e, index)}
                   className="p-4 rounded-xl cursor-move bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border border-white/30 dark:border-gray-600/30 hover:bg-white/70 dark:hover:bg-gray-700/70 flex items-center transition-all duration-200"
                 >
-                  <div className="flex-shrink-0 mr-3 cursor-move">
-                    <svg
-                      className="h-5 w-5 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8h16M4 16h16"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-2xl mr-3">{category.icon}</span>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 dark:text-white">
-                      {category.title}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {category.nav.length} 个网站
-                    </p>
+                  <div className="flex items-center w-full">
+                    <div className="flex-shrink-0 mr-3 cursor-move">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 8h16M4 16h16"
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-shrink-0 mr-3">
+                      <span className="text-2xl">{category.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                        {category.title}
+                      </h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {category.nav.length} 个网站
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

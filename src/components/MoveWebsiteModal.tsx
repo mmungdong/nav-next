@@ -85,8 +85,10 @@ export default function MoveWebsiteModal({
                   }`}
                   onClick={() => setSelectedCategory(category.id)}
                 >
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">{category.icon}</span>
+                  <div className="flex items-center w-full">
+                    <div className="flex-shrink-0 mr-3">
+                      <span className="text-2xl">{category.icon}</span>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-gray-900 dark:text-white text-lg truncate">
                         {category.title}
