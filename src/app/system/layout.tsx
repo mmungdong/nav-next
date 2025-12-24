@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Sidebar from '@/components/layout/Sidebar';
+import GitSyncStatus from '@/components/GitSyncStatus';
 
 export default function SystemLayout({
   children,
@@ -52,6 +53,7 @@ export default function SystemLayout({
         <Sidebar onLogout={handleLogout} />
       </div>
       <div className="flex-1 min-w-0 p-6">{children}</div>
+      <GitSyncStatus />
     </div>
   );
 }
