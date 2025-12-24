@@ -24,6 +24,9 @@ export default function WebManagementPage() {
   } = useNavStore();
   const { githubToken } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewingCategory, setViewingCategory] = useState<ICategory | null>(
+    null
+  ); // 当前查看的分类
   const [editingWebsite, setEditingWebsite] = useState<IWebsite | undefined>(
     undefined
   );
@@ -557,7 +560,7 @@ export default function WebManagementPage() {
     : { filteredCategories: sortedCategories, filteredWebsites: [] };
 
   return (
-    <div className="p-6">
+    <div>
       <MessageDisplay />
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -623,8 +626,8 @@ export default function WebManagementPage() {
       {/* 搜索结果 */}
       {searchQuery.trim() ? (
         <div className="space-y-6">
-          {/* 分类搜索结果 */}
-          {filteredCategories.length > 0 && (
+          {/* 分类搜索结果 - 只有在没有选中分类时显示 */}
+          {filteredCategories.length > 0 && !viewingCategory && (
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 匹配的分类
@@ -635,8 +638,8 @@ export default function WebManagementPage() {
                     key={category.id}
                     className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex items-center cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => {
-                      // 滚动到对应分类位置的逻辑可以在这里实现
-                      console.log(`跳转到分类: ${category.title}`);
+                      // 直接设置当前查看的分类
+                      setViewingCategory(category);
                     }}
                   >
                     <span className="text-2xl mr-3">{category.icon}</span>
@@ -654,9 +657,112 @@ export default function WebManagementPage() {
             </div>
           )}
 
-          {/* 网站搜索结果 */}
-          {filteredWebsites.length > 0 && (
+          {/* 显示选中的分类及其网站 - 只在选中分类时显示 */}
+          {viewingCategory && (
             <div>
+              <div className="flex items-center mb-4">
+                <button
+                  className="text-blue-500 hover:text-blue-700 mr-4 flex items-center"
+                  onClick={() => setViewingCategory(null)}
+                >
+                  <svg
+                    className="w-5 h-5 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    />
+                  </svg>
+                  返回搜索
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {viewingCategory.icon} {viewingCategory.title}
+                </h2>
+              </div>
+
+              {viewingCategory.nav.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  该分类下没有网站
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {viewingCategory.nav.map((website) => (
+                    <div
+                      key={website.id}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col transition-all duration-200 hover:shadow-md min-h-[150px]"
+                    >
+                      <div className="flex items-start">
+                        <>
+                          {website.icon && !isIconUrlFailed(website.icon) ? (
+                            <Image
+                              src={website.icon}
+                              alt={website.name}
+                              width={40}
+                              height={40}
+                              className="rounded-lg object-cover mr-3 flex-shrink-0"
+                            />
+                          ) : null}
+                          <div
+                            className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
+                            style={{
+                              display:
+                                website.icon && !isIconUrlFailed(website.icon)
+                                  ? 'none'
+                                  : 'flex',
+                            }}
+                          >
+                            <DefaultIcon />
+                          </div>
+                        </>
+                        <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {website.name}
+                          </h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex-1 line-clamp-2">
+                            {website.desc}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-end space-x-2">
+                        <button
+                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          onClick={() => handleEditWebsite(website)}
+                        >
+                          编辑
+                        </button>
+                        <button
+                          className="text-green-500 hover:text-green-700 text-sm"
+                          onClick={() =>
+                            handleMoveWebsite(website, viewingCategory)
+                          }
+                        >
+                          移动
+                        </button>
+                        <button
+                          className="text-red-500 hover:text-red-700 text-sm"
+                          onClick={() =>
+                            handleDeleteWebsite(website, viewingCategory)
+                          }
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 网站搜索结果 - 只在没有选中分类时显示 */}
+          {filteredWebsites.length > 0 && !viewingCategory && (
+            <div className="p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 匹配的网站
               </h2>
@@ -664,7 +770,7 @@ export default function WebManagementPage() {
                 {filteredWebsites.map(({ category, website }) => (
                   <div
                     key={website.id}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col h-full transition-all duration-200 hover:shadow-md"
+                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col transition-all duration-200 hover:shadow-md min-h-[150px]"
                   >
                     <div className="flex items-start">
                       <>
@@ -674,11 +780,11 @@ export default function WebManagementPage() {
                             alt={website.name}
                             width={40}
                             height={40}
-                            className="rounded-lg object-cover mr-3"
+                            className="rounded-lg object-cover mr-3 flex-shrink-0"
                           />
                         ) : null}
                         <div
-                          className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
+                          className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
                           style={{
                             display:
                               website.icon && !isIconUrlFailed(website.icon)
@@ -689,11 +795,11 @@ export default function WebManagementPage() {
                           <DefaultIcon />
                         </div>
                       </>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {website.name}
                         </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex-1 line-clamp-2">
                           {website.desc}
                         </p>
                         <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -761,6 +867,7 @@ export default function WebManagementPage() {
           {filteredCategories.map((category) => (
             <div
               key={category.id}
+              id={`category-${category.id}`}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
             >
               <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
@@ -788,9 +895,6 @@ export default function WebManagementPage() {
               </div>
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                    网站列表
-                  </h3>
                   <div className="flex space-x-2">
                     <button
                       className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
@@ -816,7 +920,7 @@ export default function WebManagementPage() {
                     {category.nav.map((website) => (
                       <div
                         key={website.id}
-                        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col h-full transition-all duration-200 hover:shadow-md"
+                        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col transition-all duration-200 hover:shadow-md min-h-[140px]"
                       >
                         <div className="flex items-start">
                           <>
@@ -826,11 +930,11 @@ export default function WebManagementPage() {
                                 alt={website.name}
                                 width={40}
                                 height={40}
-                                className="rounded-lg object-cover mr-3"
+                                className="rounded-lg object-cover mr-3 flex-shrink-0"
                               />
                             ) : null}
                             <div
-                              className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
+                              className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
                               style={{
                                 display:
                                   website.icon && !isIconUrlFailed(website.icon)
@@ -841,18 +945,17 @@ export default function WebManagementPage() {
                               <DefaultIcon />
                             </div>
                           </>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                             <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {website.name}
                             </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex-1 line-clamp-2">
                               {website.desc}
                             </p>
                           </div>
                         </div>
 
-                        {/* 标签显示已移除 */}
-
+                        {/* 操作按钮 */}
                         <div className="mt-3 flex justify-end space-x-2">
                           <button
                             className="text-blue-500 hover:text-blue-700 text-sm"
