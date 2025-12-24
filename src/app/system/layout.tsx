@@ -48,8 +48,10 @@ export default function SystemLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-      <Sidebar onLogout={handleLogout} />
-      <div className="flex-1">{children}</div>
+      <div className="w-[200px] lg:w-[250px] border-r border-gray-200 dark:border-gray-700">
+        <Sidebar onLogout={handleLogout} />
+      </div>
+      <div className="flex-1 min-w-0 p-6">{children}</div>
     </div>
   );
 }

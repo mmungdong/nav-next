@@ -23,8 +23,7 @@ const menuItems = [
 export default function Sidebar({ onLogout }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  // 在桌面端默认不收起菜单栏
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // 移除收起功能，始终保持展开状态
   const [loadingHref, setLoadingHref] = useState<string | null>(null);
   const [clickLocked, setClickLocked] = useState<boolean>(false);
   const [scrollFollowing, setScrollFollowing] = useState<boolean>(false);
@@ -158,54 +157,14 @@ export default function Sidebar({ onLogout }: SidebarProps) {
   }, []);
 
   return (
-    <motion.div
-      className="h-screen sticky top-0"
-      animate={{
-        width: isCollapsed
-          ? animationConfig.sidebar.collapsedWidth
-          : animationConfig.sidebar.expandedWidth,
-      }}
-      transition={{
-        duration: animationConfig.sidebar.width.duration / 1000,
-        ease: animationConfig.sidebar.width.ease,
-      }}
-      style={{ willChange: 'width' }}
-    >
+    <div className="h-screen sticky top-0 w-[200px] lg:w-[250px]">
       <div className="h-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-r-xl flex flex-col">
         {/* 头部区域 */}
         <div className="p-5 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            {!isCollapsed && (
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-                管理系统
-              </h1>
-            )}
-            <motion.button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              animate={{ rotate: isCollapsed ? 180 : 0 }}
-              transition={{
-                duration:
-                  animationConfig.sidebar.collapseButton.rotate.duration / 1000,
-                ease: animationConfig.sidebar.collapseButton.rotate.ease,
-              }}
-              aria-label={isCollapsed ? '展开菜单' : '收起菜单'}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </motion.button>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+              管理系统
+            </h1>
           </div>
         </div>
 
@@ -252,32 +211,17 @@ export default function Sidebar({ onLogout }: SidebarProps) {
                     }`}
                   >
                     {/* 如果需要图标可以在这里添加 */}
-                    {!isCollapsed && (
-                      <span className="flex items-center truncate">
-                        <span>{item.name}</span>
-                        {isLoading(item.href) && (
-                          <motion.span
-                            className="ml-2 inline-block w-3 h-3 border-t-2 border-r-2 border-blue-500 rounded-full animate-spin"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                          />
-                        )}
-                      </span>
-                    )}
-                    {isCollapsed && (
-                      <span className="flex items-center justify-center truncate">
-                        <span>{item.name.charAt(0)}</span>
-                        {isLoading(item.href) && (
-                          <motion.span
-                            className="ml-1 inline-block w-2 h-2 border-t-2 border-r-2 border-blue-500 rounded-full animate-spin"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                          />
-                        )}
-                      </span>
-                    )}
+                    <span className="flex items-center truncate">
+                      <span>{item.name}</span>
+                      {isLoading(item.href) && (
+                        <motion.span
+                          className="ml-2 inline-block w-3 h-3 border-t-2 border-r-2 border-blue-500 rounded-full animate-spin"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        />
+                      )}
+                    </span>
                   </a>
                 </motion.li>
               ))}
@@ -288,127 +232,53 @@ export default function Sidebar({ onLogout }: SidebarProps) {
         {/* 底部操作区域 */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex flex-col space-y-2">
-            {!isCollapsed && (
-              <>
-                <motion.button
-                  onClick={() => router.push('/')}
-                  className="flex items-center justify-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 touch-manipulation"
-                  whileHover={{
-                    scale: animationConfig.sidebar.menuItem.hover.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.hover.duration / 1000,
-                    },
-                  }}
-                  whileTap={{
-                    scale: animationConfig.sidebar.menuItem.tap.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.tap.duration / 1000,
-                    },
-                  }}
-                >
-                  返回主页
-                </motion.button>
-                <motion.button
-                  onClick={() => {
-                    if (onLogout) {
-                      onLogout();
-                    }
-                  }}
-                  className="flex items-center justify-center px-4 py-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors duration-200 touch-manipulation"
-                  whileHover={{
-                    scale: animationConfig.sidebar.menuItem.hover.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.hover.duration / 1000,
-                    },
-                  }}
-                  whileTap={{
-                    scale: animationConfig.sidebar.menuItem.tap.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.tap.duration / 1000,
-                    },
-                  }}
-                >
-                  退出登录
-                </motion.button>
-              </>
-            )}
-            {isCollapsed && (
-              <>
-                <motion.button
-                  onClick={() => router.push('/')}
-                  className="p-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 touch-manipulation flex items-center justify-center"
-                  title="返回主页"
-                  whileHover={{
-                    scale: animationConfig.sidebar.menuItem.hover.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.hover.duration / 1000,
-                    },
-                  }}
-                  whileTap={{
-                    scale: animationConfig.sidebar.menuItem.tap.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.tap.duration / 1000,
-                    },
-                  }}
-                  aria-label="返回主页"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                  </svg>
-                </motion.button>
-                <motion.button
-                  onClick={() => {
-                    if (onLogout) {
-                      onLogout();
-                    }
-                  }}
-                  className="p-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors duration-200 touch-manipulation flex items-center justify-center"
-                  title="退出登录"
-                  whileHover={{
-                    scale: animationConfig.sidebar.menuItem.hover.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.hover.duration / 1000,
-                    },
-                  }}
-                  whileTap={{
-                    scale: animationConfig.sidebar.menuItem.tap.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.tap.duration / 1000,
-                    },
-                  }}
-                  aria-label="退出登录"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </motion.button>
-              </>
-            )}
+            <motion.button
+              onClick={() => router.push('/')}
+              className="flex items-center justify-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 touch-manipulation"
+              whileHover={{
+                scale: animationConfig.sidebar.menuItem.hover.scale,
+                transition: {
+                  duration:
+                    animationConfig.sidebar.menuItem.hover.duration / 1000,
+                },
+              }}
+              whileTap={{
+                scale: animationConfig.sidebar.menuItem.tap.scale,
+                transition: {
+                  duration:
+                    animationConfig.sidebar.menuItem.tap.duration / 1000,
+                },
+              }}
+            >
+              返回主页
+            </motion.button>
+            <motion.button
+              onClick={() => {
+                if (onLogout) {
+                  onLogout();
+                }
+              }}
+              className="flex items-center justify-center px-4 py-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors duration-200 touch-manipulation"
+              whileHover={{
+                scale: animationConfig.sidebar.menuItem.hover.scale,
+                transition: {
+                  duration:
+                    animationConfig.sidebar.menuItem.hover.duration / 1000,
+                },
+              }}
+              whileTap={{
+                scale: animationConfig.sidebar.menuItem.tap.scale,
+                transition: {
+                  duration:
+                    animationConfig.sidebar.menuItem.tap.duration / 1000,
+                },
+              }}
+            >
+              退出登录
+            </motion.button>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

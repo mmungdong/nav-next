@@ -16,7 +16,6 @@ export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const { isAuthenticated, checkAuth } = useAuthStore();
   const [searchQuery] = useState('');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('');
   const [userInitiatedNavigation, setUserInitiatedNavigation] = useState(false);
@@ -185,30 +184,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-      {/* 移动端菜单按钮 */}
-      <button
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-20 p-2 rounded-md bg-white dark:bg-gray-800 shadow-md"
-      >
-        <svg
-          className="w-6 h-6 text-gray-600 dark:text-gray-300"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </button>
-
-      {/* 左侧分类菜单 */}
+      {/* 左侧分类菜单 - 始终可见，不隐藏 */}
       <div
         ref={menuRef}
-        className={`fixed lg:sticky lg:top-0 z-10 w-64 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} custom-scrollbar`}
+        className="w-[180px] sm:w-[200px] md:w-[230px] sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto custom-scrollbar flex-shrink-0"
       >
         <div className="p-5">
           <div className="flex items-center justify-between mb-6">
@@ -216,24 +195,6 @@ export default function Home() {
               <span className="mr-2 text-xl">🌐</span>
               Guidebook
             </h1>
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="lg:hidden p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <svg
-                className="w-5 h-5 text-gray-500 dark:text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
           </div>
 
           {/* 分类导航列表 */}
@@ -245,7 +206,6 @@ export default function Home() {
                     href={`#${category.id}`}
                     onClick={(e) => {
                       e.preventDefault();
-                      setIsMenuOpen(false);
                       const element = document.getElementById(
                         category.id.toString()
                       );
@@ -325,17 +285,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 遮罩层（移动端） */}
-      {isMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-0"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
-      )}
-
       {/* 主内容区 */}
-      <div className="flex-1">
-        <div className="p-4 lg:p-6 lg:px-20 max-w-[2000px] mx-auto">
+      <div className="flex-1 min-w-0">
+        <div className="p-4 lg:p-6 lg:px-20 mx-auto">
           {filteredCategories.length === 0 ? (
             <div className="text-center py-12">
               <svg
@@ -411,9 +363,9 @@ export default function Home() {
                             },
                           }}
                         >
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full">
+                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full max-h-[90px] overflow-hidden">
                             <div className="flex items-start">
-                              <>
+                              <div className="relative w-10 h-10 mr-3 flex-shrink-0">
                                 {website.icon &&
                                 !isIconUrlFailed(website.icon) ? (
                                   <Image
@@ -421,11 +373,11 @@ export default function Home() {
                                     alt={website.name}
                                     width={40}
                                     height={40}
-                                    className="rounded-lg object-cover mr-3"
+                                    className="w-10 h-10 rounded-lg object-cover"
                                     onError={(e) => {
                                       // 如果图标加载失败，标记为失败并显示默认图标
                                       markIconUrlAsFailed(website.icon);
-                                      // 隐藏失败的图标
+                                      // 隐藏失败的图标，让默认图标显示
                                       e.currentTarget.style.display = 'none';
                                       // 显示默认图标
                                       const defaultIconElement = e.currentTarget
@@ -438,23 +390,21 @@ export default function Home() {
                                   />
                                 ) : null}
                                 <div
-                                  className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
-                                  style={{
-                                    display:
-                                      website.icon &&
-                                      !isIconUrlFailed(website.icon)
-                                        ? 'none'
-                                        : 'flex',
-                                  }}
+                                  className={`w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center absolute inset-0 ${
+                                    website.icon &&
+                                    !isIconUrlFailed(website.icon)
+                                      ? 'hidden'
+                                      : 'flex'
+                                  }`}
                                 >
                                   <DefaultIcon />
                                 </div>
-                              </>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                              </div>
+                              <div className="flex-1 min-w-0 flex flex-col">
+                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-1">
                                   {website.name}
                                 </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 grow">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
                                   {website.desc}
                                 </p>
                               </div>
