@@ -646,43 +646,9 @@ export default function WebManagementPage() {
   // 设置定时检查同步状态
   useEffect(() => {
     if (githubToken) {
-      // 每30分钟检查一次数据同步状态
-      const interval = setInterval(
-        () => {
-          checkSyncStatus();
-        },
-        30 * 60 * 1000
-      ); // 30分钟 = 1800000毫秒
-
-      // 保存定时器引用以便清理
-      syncIntervalRef.current = interval;
-
-      // 初始检查
-      const initialCheck = async () => {
-        await checkSyncStatus();
-      };
-      initialCheck();
-
-      // 清理定时器
-      return () => {
-        if (syncIntervalRef.current) {
-          clearInterval(syncIntervalRef.current);
-        }
-      };
-    } else {
-      // 如果没有GitHub Token，清理定时器
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-        syncIntervalRef.current = null;
-      }
+      checkSyncStatus();
     }
-  }, [
-    githubToken,
-    checkSyncStatus,
-    setShowSyncNotification,
-    setMessage,
-    setIsMessageVisible,
-  ]);
+  }, []);
 
   useEffect(() => {
     fetchCategories();
