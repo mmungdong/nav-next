@@ -25,7 +25,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 844,
@@ -37,7 +39,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [2]
+        "topTypes": [
+          2
+        ]
       },
       {
         "id": 845,
@@ -82,13 +86,6 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
-      },
-      {
-        "id": 1766589404526,
-        "name": "sohu",
-        "desc": "",
-        "url": "https://www.sohu.com/a/936982320_122004016",
-        "icon": "https://www.google.com/s2/favicons?domain=www.sohu.com"
       }
     ]
   },
@@ -107,7 +104,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1075,
@@ -120,7 +119,9 @@
         "top": true,
         "ownVisible": false,
         "index": null,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1019,
@@ -143,7 +144,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       }
     ]
   },
@@ -162,7 +165,9 @@
         "rate": 5,
         "top": true,
         "ownVisible": false,
-        "topTypes": [1]
+        "topTypes": [
+          1
+        ]
       },
       {
         "id": 1071,
