@@ -264,6 +264,13 @@
         "top": false,
         "ownVisible": false,
         "index": null
+      },
+      {
+        "id": 1766627723876,
+        "name": "Claude Code - Aitmpl",
+        "desc": "",
+        "url": "https://www.aitmpl.com/",
+        "icon": "https://www.google.com/s2/favicons?domain=www.aitmpl.com"
       }
     ]
   },
