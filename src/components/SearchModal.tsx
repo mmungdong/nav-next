@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SiteSearchResults from './SiteSearchResults';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import { animationConfig } from '@/lib/animations';
 
 interface SearchEngine {
@@ -219,12 +219,13 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                       {engine.id === 'internal' ? (
                         <span className="text-xl mr-3">{engine.icon}</span>
                       ) : (
-                        <Image
+                        <OptimizedImage
                           src={engine.icon}
                           alt={engine.name}
                           width={20}
                           height={20}
                           className="rounded-full mr-3"
+                          fallbackClassName="w-5 h-5 rounded-full mr-3"
                         />
                       )}
                       <span className="font-medium text-gray-900 dark:text-white">

@@ -220,7 +220,7 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
       const categories = rawData.map((category: ICategory) => ({
         id: category.id,
         title: category.title || '未知分类',
-        icon: category.icon || '',
+        icon: category.icon, // 保持类型一致，允许undefined
         nav: category.nav || [],
       }));
 
@@ -244,7 +244,7 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
           name: 'Google',
           desc: '全球最大的搜索引擎',
           url: 'https://www.google.com',
-          icon: '',
+          icon: undefined, // 使用undefined而不是空字符串，与新类型定义一致
           rate: 5,
           top: true,
           ownVisible: false,
@@ -254,7 +254,7 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
           name: 'GitHub',
           desc: '全球最大的代码托管平台',
           url: 'https://github.com',
-          icon: '',
+          icon: undefined, // 使用undefined而不是空字符串，与新类型定义一致
           rate: 5,
           top: true,
           ownVisible: false,
@@ -271,7 +271,7 @@ const fetchCategoriesData = async (): Promise<ICategory[]> => {
           name: 'MDN Web Docs',
           desc: 'Web开发权威文档',
           url: 'https://developer.mozilla.org',
-          icon: '',
+          icon: undefined, // 使用undefined而不是空字符串，与新类型定义一致
           rate: 5,
           top: true,
           ownVisible: false,

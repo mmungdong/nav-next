@@ -22,7 +22,7 @@ export default function EditWebsiteModal({
     name: '',
     desc: '',
     url: '',
-    icon: '',
+    icon: undefined, // 使用undefined而不是空字符串，与新类型定义一致
   });
   const [isFetching, setIsFetching] = useState(false);
 
@@ -36,7 +36,7 @@ export default function EditWebsiteModal({
         name: '',
         desc: '',
         url: '',
-        icon: '',
+        icon: undefined, // 使用undefined而不是空字符串，与新类型定义一致
       });
     }
   }, [website]);

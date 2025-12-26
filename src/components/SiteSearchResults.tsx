@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ICategory, IWebsite } from '@/types';
 import { useNavStore } from '@/stores/navStore';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface SiteSearchResultsProps {
   query: string;
@@ -136,12 +136,13 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
                       >
                         <div className="flex items-start">
                           {website.icon ? (
-                            <Image
+                            <OptimizedImage
                               src={website.icon}
                               alt={website.name}
                               width={40}
                               height={40}
                               className="rounded-lg mr-3 flex-shrink-0 object-cover"
+                              fallbackClassName="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0"
                             />
                           ) : (
                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0">

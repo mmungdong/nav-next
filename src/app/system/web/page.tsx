@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import DefaultIcon, { isIconUrlFailed } from '@/components/DefaultIcon';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import { ICategory, IWebsite } from '@/types';
 import EditWebsiteModal from '@/components/EditWebsiteModal';
 import EditCategoryModal from '@/components/EditCategoryModal';
@@ -849,26 +849,14 @@ export default function WebManagementPage() {
                     >
                       <div className="flex items-start">
                         <>
-                          {website.icon && !isIconUrlFailed(website.icon) ? (
-                            <Image
-                              src={website.icon}
-                              alt={website.name}
-                              width={40}
-                              height={40}
-                              className="rounded-lg object-cover mr-3 flex-shrink-0"
-                            />
-                          ) : null}
-                          <div
-                            className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
-                            style={{
-                              display:
-                                website.icon && !isIconUrlFailed(website.icon)
-                                  ? 'none'
-                                  : 'flex',
-                            }}
-                          >
-                            <DefaultIcon />
-                          </div>
+                          <OptimizedImage
+                            src={website.icon}
+                            alt={website.name}
+                            width={40}
+                            height={40}
+                            className="rounded-lg object-cover mr-3 flex-shrink-0"
+                            fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
+                          />
                         </>
                         <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                           <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -925,26 +913,14 @@ export default function WebManagementPage() {
                   >
                     <div className="flex items-start">
                       <>
-                        {website.icon && !isIconUrlFailed(website.icon) ? (
-                          <Image
-                            src={website.icon}
-                            alt={website.name}
-                            width={40}
-                            height={40}
-                            className="rounded-lg object-cover mr-3 flex-shrink-0"
-                          />
-                        ) : null}
-                        <div
-                          className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
-                          style={{
-                            display:
-                              website.icon && !isIconUrlFailed(website.icon)
-                                ? 'none'
-                                : 'flex',
-                          }}
-                        >
-                          <DefaultIcon />
-                        </div>
+                        <OptimizedImage
+                          src={website.icon}
+                          alt={website.name}
+                          width={40}
+                          height={40}
+                          className="rounded-lg object-cover mr-3 flex-shrink-0"
+                          fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
+                        />
                       </>
                       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -1075,26 +1051,14 @@ export default function WebManagementPage() {
                       >
                         <div className="flex items-start">
                           <>
-                            {website.icon && !isIconUrlFailed(website.icon) ? (
-                              <Image
-                                src={website.icon}
-                                alt={website.name}
-                                width={40}
-                                height={40}
-                                className="rounded-lg object-cover mr-3 flex-shrink-0"
-                              />
-                            ) : null}
-                            <div
-                              className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
-                              style={{
-                                display:
-                                  website.icon && !isIconUrlFailed(website.icon)
-                                    ? 'none'
-                                    : 'flex',
-                              }}
-                            >
-                              <DefaultIcon />
-                            </div>
+                            <OptimizedImage
+                              src={website.icon}
+                              alt={website.name}
+                              width={40}
+                              height={40}
+                              className="rounded-lg object-cover mr-3 flex-shrink-0"
+                              fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
+                            />
                           </>
                           <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                             <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">

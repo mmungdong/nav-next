@@ -8,8 +8,8 @@ import DefaultIcon, {
   isIconUrlFailed,
   markIconUrlAsFailed,
 } from '@/components/DefaultIcon';
+import OptimizedImage from '@/components/OptimizedImage';
 import SearchModal from '@/components/SearchModal';
-import Image from 'next/image';
 import { animationConfig } from '@/lib/animations';
 
 export default function Home() {
@@ -366,39 +366,14 @@ export default function Home() {
                           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full max-h-[90px] overflow-hidden">
                             <div className="flex items-start">
                               <div className="relative w-10 h-10 mr-3 flex-shrink-0">
-                                {website.icon &&
-                                !isIconUrlFailed(website.icon) ? (
-                                  <Image
-                                    src={website.icon}
-                                    alt={website.name}
-                                    width={40}
-                                    height={40}
-                                    className="w-10 h-10 rounded-lg object-cover"
-                                    onError={(e) => {
-                                      // 如果图标加载失败，标记为失败并显示默认图标
-                                      markIconUrlAsFailed(website.icon);
-                                      // 隐藏失败的图标，让默认图标显示
-                                      e.currentTarget.style.display = 'none';
-                                      // 显示默认图标
-                                      const defaultIconElement = e.currentTarget
-                                        .nextElementSibling as HTMLElement;
-                                      if (defaultIconElement) {
-                                        defaultIconElement.style.display =
-                                          'flex';
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-                                <div
-                                  className={`w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center absolute inset-0 ${
-                                    website.icon &&
-                                    !isIconUrlFailed(website.icon)
-                                      ? 'hidden'
-                                      : 'flex'
-                                  }`}
-                                >
-                                  <DefaultIcon />
-                                </div>
+                                <OptimizedImage
+                                  src={website.icon}
+                                  alt={website.name}
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-lg object-cover"
+                                  fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center"
+                                />
                               </div>
                               <div className="flex-1 min-w-0 flex flex-col">
                                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-1">

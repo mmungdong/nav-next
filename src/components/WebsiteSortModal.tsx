@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import { ICategory, IWebsite } from '@/types';
 
 interface WebsiteSortModalProps {
@@ -123,18 +123,13 @@ export default function WebsiteSortModal({
                     </div>
                     <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
                       {website.icon ? (
-                        <Image
+                        <OptimizedImage
                           src={website.icon}
                           alt={website.name}
                           width={24}
                           height={24}
                           className="object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML =
-                              '<div className="text-xs">🌐</div>';
-                          }}
+                          fallbackClassName="text-xs"
                         />
                       ) : (
                         <div className="text-xs">🌐</div>
