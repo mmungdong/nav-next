@@ -66,3 +66,13 @@ export interface IWebsiteConfig {
   defaultIcon: string;
   enableSearch: boolean;
 }
+
+// 搜索配置类型
+export interface ISearchConfig {
+  id: number;
+  name: string;
+  url: string;
+  icon: string;
+  sort: number;
+  isActive: boolean;
+}

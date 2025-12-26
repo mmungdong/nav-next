@@ -1,18 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-
-interface SearchConfig {
-  id: number;
-  name: string;
-  url: string;
-  icon: string;
-  sort: number;
-  isActive: boolean;
-}
+import { useState, useMemo, useEffect } from 'react';
+import { ISearchConfig } from '@/types';
+import MessageDisplay from '@/components/MessageDisplay';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import { debounce } from '@/hooks/useDebounce';
 
 export default function SearchManagementPage() {
-  const [searchConfigs, setSearchConfigs] = useState<SearchConfig[]>([
+  const [searchConfigs, setSearchConfigs] = useState<ISearchConfig[]>([
     {
       id: 1,
       name: '百度',
@@ -39,69 +34,135 @@ export default function SearchManagementPage() {
     },
   ]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
   const [showModal, setShowModal] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<SearchConfig | null>(null);
+  const [editingConfig, setEditingConfig] = useState<ISearchConfig | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState<number | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'loading'; text: string } | null>(null);
+  const [isMessageVisible, setIsMessageVisible] = useState(false);
+
+  // 使用防抖搜索
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
 
   // 过滤搜索配置
-  const filteredConfigs = searchConfigs.filter(
-    (config) =>
-      config.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      config.url.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConfigs = useMemo(() => {
+    return searchConfigs.filter(
+      (config) =>
+        config.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        config.url.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+  }, [searchConfigs, debouncedSearchQuery]);
 
   const handleAddConfig = () => {
     setEditingConfig(null);
     setShowModal(true);
   };
 
-  const handleEditConfig = (config: SearchConfig) => {
+  const handleEditConfig = (config: ISearchConfig) => {
     setEditingConfig(config);
     setShowModal(true);
   };
 
   const handleDeleteConfig = (id: number) => {
-    if (confirm('确定要删除这个搜索配置吗？')) {
-      setSearchConfigs(searchConfigs.filter((config) => config.id !== id));
+    setConfigToDelete(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (configToDelete !== null) {
+      try {
+        setSearchConfigs(searchConfigs.filter((config) => config.id !== configToDelete));
+        setShowDeleteConfirm(false);
+        setConfigToDelete(null);
+        setMessage({ type: 'success', text: '删除成功' });
+        // 自动清除消息提示
+        setTimeout(() => setMessage(null), 3000);
+      } catch (error) {
+        console.error('删除搜索配置失败:', error);
+        setMessage({ type: 'error', text: '删除失败，请重试' });
+        setTimeout(() => setMessage(null), 3000);
+      }
     }
   };
 
   const handleToggleActive = (id: number) => {
-    setSearchConfigs(
-      searchConfigs.map((config) =>
-        config.id === id ? { ...config, isActive: !config.isActive } : config
-      )
-    );
-  };
-
-  const handleSaveConfig = (configData: Partial<SearchConfig>) => {
-    if (editingConfig) {
-      // 编辑配置
+    try {
       setSearchConfigs(
         searchConfigs.map((config) =>
-          config.id === editingConfig.id ? { ...config, ...configData } : config
+          config.id === id ? { ...config, isActive: !config.isActive } : config
         )
       );
-    } else {
-      // 添加配置
-      const newConfig: SearchConfig = {
-        id: Math.max(...searchConfigs.map((c) => c.id), 0) + 1,
-        name: configData.name || '',
-        url: configData.url || '',
-        icon: configData.icon || '🔍',
-        sort:
-          configData.sort !== undefined
-            ? configData.sort
-            : searchConfigs.length + 1,
-        isActive:
-          configData.isActive !== undefined ? configData.isActive : true,
-      };
-      setSearchConfigs([...searchConfigs, newConfig]);
+      setMessage({ type: 'success', text: '状态已更新' });
+      // 自动清除消息提示
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error('更新搜索配置状态失败:', error);
+      setMessage({ type: 'error', text: '更新状态失败，请重试' });
+      setTimeout(() => setMessage(null), 3000);
     }
-    setShowModal(false);
+  };
+
+  const handleSaveConfig = (configData: Partial<ISearchConfig>) => {
+    try {
+      if (!configData.name || !configData.name.trim()) {
+        setMessage({ type: 'error', text: '配置名称不能为空' });
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+
+      if (!configData.url || !configData.url.trim()) {
+        setMessage({ type: 'error', text: '配置URL不能为空' });
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+
+      if (editingConfig) {
+        // 编辑配置
+        setSearchConfigs(
+          searchConfigs.map((config) =>
+            config.id === editingConfig.id ? { ...config, ...configData } : config
+          )
+        );
+        setMessage({ type: 'success', text: '配置已更新' });
+      } else {
+        // 添加配置
+        const newConfig: ISearchConfig = {
+          id: Math.max(...searchConfigs.map((c) => c.id), 0) + 1,
+          name: configData.name || '',
+          url: configData.url || '',
+          icon: configData.icon || '🔍',
+          sort:
+            configData.sort !== undefined
+              ? configData.sort
+              : searchConfigs.length + 1,
+          isActive:
+            configData.isActive !== undefined ? configData.isActive : true,
+        };
+        setSearchConfigs([...searchConfigs, newConfig]);
+        setMessage({ type: 'success', text: '配置已添加' });
+      }
+      setShowModal(false);
+      // 自动清除消息提示
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error('保存搜索配置失败:', error);
+      setMessage({ type: 'error', text: '保存配置失败，请重试' });
+      setTimeout(() => setMessage(null), 3000);
+    }
   };
 
   return (
     <div className="">
+      {message && <MessageDisplay message={message} isMessageVisible={isMessageVisible} />}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           搜索管理
@@ -141,98 +202,106 @@ export default function SearchManagementPage() {
 
       {/* 搜索配置列表 */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                名称
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                图标
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                URL
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                排序
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                状态
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-              >
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredConfigs.map((config) => (
-              <tr key={config.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {config.name}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">
-                    {config.icon}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 dark:text-white truncate max-w-xs">
-                    {config.url}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                  {config.sort}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => handleToggleActive(config.id)}
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      config.isActive
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                    }`}
+        {filteredConfigs.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">暂无搜索配置，点击添加按钮创建</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
-                    {config.isActive ? '启用' : '禁用'}
-                  </button>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleEditConfig(config)}
-                    className="text-blue-500 hover:text-blue-700 mr-3"
+                    名称
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell"
                   >
-                    编辑
-                  </button>
-                  <button
-                    onClick={() => handleDeleteConfig(config.id)}
-                    className="text-red-500 hover:text-red-700"
+                    图标
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                   >
-                    删除
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    URL
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell"
+                  >
+                    排序
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                  >
+                    状态
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                  >
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredConfigs.map((config) => (
+                  <tr key={config.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {config.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                      <div className="text-sm text-gray-900 dark:text-white">
+                        {config.icon}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 dark:text-white truncate max-w-xs md:max-w-md">
+                        {config.url}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden md:table-cell">
+                      {config.sort}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => handleToggleActive(config.id)}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          config.isActive
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                        }`}
+                      >
+                        {config.isActive ? '启用' : '禁用'}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEditConfig(config)}
+                        className="text-blue-500 hover:text-blue-700 mr-3"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => handleDeleteConfig(config.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        删除
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 搜索配置编辑模态框 */}
@@ -243,6 +312,14 @@ export default function SearchManagementPage() {
           onClose={() => setShowModal(false)}
         />
       )}
+
+      {/* 删除确认模态框 */}
+      <DeleteConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        itemName={searchConfigs.find(c => c.id === configToDelete)?.name || '配置'}
+      />
     </div>
   );
 }
@@ -252,8 +329,8 @@ function SearchConfigModal({
   onSave,
   onClose,
 }: {
-  config: SearchConfig | null;
-  onSave: (config: Partial<SearchConfig>) => void;
+  config: ISearchConfig | null;
+  onSave: (config: Partial<ISearchConfig>) => void;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState(
@@ -265,6 +342,28 @@ function SearchConfigModal({
       isActive: true,
     }
   );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // 验证名称不为空
+    if (!formData.name.trim()) {
+      newErrors.name = '名称不能为空';
+    }
+
+    // 验证URL格式，检查是否包含搜索参数
+    if (!formData.url.trim()) {
+      newErrors.url = 'URL不能为空';
+    } else if (!formData.url.includes('{query}') && !formData.url.includes('?q=') && !formData.url.includes('?wd=')) {
+      newErrors.url = 'URL必须包含搜索参数（如 ?q=, ?wd= 或 {query}）';
+    } else if (!formData.url.startsWith('http://') && !formData.url.startsWith('https://')) {
+      newErrors.url = 'URL必须以 http:// 或 https:// 开头';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -275,11 +374,22 @@ function SearchConfigModal({
       ...formData,
       [name]: type === 'checkbox' ? checked : value,
     });
+
+    // 清除相关错误信息
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    if (validateForm()) {
+      onSave(formData);
+    }
   };
 
   return (
@@ -303,9 +413,12 @@ function SearchConfigModal({
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
+                errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+              }`}
               required
             />
+            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
           </div>
 
           <div className="mb-4">
@@ -338,12 +451,15 @@ function SearchConfigModal({
               name="url"
               value={formData.url}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
+                errors.url ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+              }`}
               required
             />
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               示例: https://www.google.com/search?q={'{query}'}
             </p>
+            {errors.url && <p className="mt-1 text-sm text-red-500">{errors.url}</p>}
           </div>
 
           <div className="mb-4">
