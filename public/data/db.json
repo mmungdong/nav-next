@@ -384,6 +384,13 @@
         "top": false,
         "ownVisible": false,
         "index": null
+      },
+      {
+        "id": 1767578340158,
+        "name": "Jimmy Song",
+        "desc": "云原生 & AI",
+        "url": "https://jimmysong.io/zh/",
+        "icon": "https://www.google.com/s2/favicons?domain=jimmysong.io"
       }
     ]
   },
