@@ -754,24 +754,6 @@
     ]
   },
   {
-    "id": 357,
-    "title": "开发工具",
-    "icon": "",
-    "nav": [
-      {
-        "id": 387,
-        "name": "BootCDN",
-        "desc": "稳定、快速、免费的前端开源项目 CDN 加速服务",
-        "url": "https://www.bootcdn.cn",
-        "icon": "https://www.bootcdn.cn/assets/ico/favicon.ico",
-        "tags": [],
-        "rate": 5,
-        "top": false,
-        "ownVisible": false
-      }
-    ]
-  },
-  {
     "id": 285,
     "title": "vpn",
     "icon": "",
