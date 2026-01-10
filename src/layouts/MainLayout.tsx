@@ -11,8 +11,13 @@ import DefaultIcon, {
 import OptimizedImage from '@/components/OptimizedImage';
 import SearchModal from '@/components/SearchModal';
 import { animationConfig } from '@/lib/animations';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
-export default function Home() {
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function MainLayout({ children }: MainLayoutProps) {
   const { categories, loading, fetchCategories } = useNavStore();
   const { isAuthenticated, checkAuth } = useAuthStore();
   const [searchQuery] = useState('');
@@ -22,6 +27,10 @@ export default function Home() {
   const [navigationLockEndTime, setNavigationLockEndTime] = useState(0);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // 移动端检测
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile); // 移动端默认关闭侧边栏
 
   useEffect(() => {
     fetchCategories();
@@ -157,21 +166,6 @@ export default function Home() {
     }
   }, [activeCategory]);
 
-  // 过滤分类和网站
-  const filteredCategories = categories.filter((category) => {
-    // 检查分类标题是否匹配搜索查询
-    if (category.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return true;
-    }
-
-    // 检查分类下的网站是否匹配搜索查询
-    return category.nav.some(
-      (website) =>
-        website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        website.desc.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
@@ -184,10 +178,50 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-      {/* 左侧分类菜单 - 始终可见，不隐藏 */}
+      {/* 移动端汉堡菜单按钮 */}
+      {isMobile && (
+        <div className="fixed top-4 left-4 z-50 md:hidden">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-gray-200 dark:border-gray-700"
+            aria-label={sidebarOpen ? "关闭菜单" : "打开菜单"}
+          >
+            <svg
+              className="w-6 h-6 text-gray-700 dark:text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {sidebarOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* 左侧分类菜单 - 移动端可折叠 */}
       <div
         ref={menuRef}
-        className="w-[180px] sm:w-[200px] md:w-[230px] sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto custom-scrollbar flex-shrink-0"
+        className={`
+          ${isMobile ? (sidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full') : 'w-[180px] sm:w-[200px] md:w-[230px]'}
+          fixed md:sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-lg h-screen overflow-y-auto custom-scrollbar
+          transition-transform duration-300 ease-in-out
+          ${isMobile ? 'md:translate-x-0' : ''}
+          flex-shrink-0
+        `}
       >
         <div className="p-5">
           <div className="flex items-center justify-between mb-6">
@@ -200,7 +234,7 @@ export default function Home() {
           {/* 分类导航列表 */}
           <nav className="mb-4">
             <ul className="space-y-1">
-              {filteredCategories.map((category) => (
+              {categories.map((category) => (
                 <li key={category.id}>
                   <a
                     href={`#${category.id}`}
@@ -220,6 +254,11 @@ export default function Home() {
 
                         // 平滑滚动到目标元素
                         element.scrollIntoView({ behavior: 'smooth' });
+
+                        // 移动端点击后关闭侧边栏
+                        if (isMobile) {
+                          setSidebarOpen(false);
+                        }
                       }
                     }}
                     className={`flex items-center px-4 py-2.5 text-sm rounded-lg transition-colors ${
@@ -280,119 +319,36 @@ export default function Home() {
 
           {/* 底部信息 */}
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            共 {filteredCategories.length} 个分类
+            共 {categories.length} 个分类
           </div>
         </div>
+
+        {/* 移动端关闭按钮 */}
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="absolute top-4 right-4 md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="关闭菜单"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
+      {/* 遮罩层 - 移动端显示 */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* 主内容区 */}
-      <div className="flex-1 min-w-0">
+      <div className={`flex-1 min-w-0 ${isMobile ? 'pt-16 md:pt-0' : ''}`}>
         <div className="p-4 lg:p-6 lg:px-20 mx-auto">
-          {filteredCategories.length === 0 ? (
-            <div className="text-center py-12">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
-                未找到结果
-              </h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">
-                没有找到与 &quot;{searchQuery}&quot; 相关的分类或网站。
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {filteredCategories.map((category, categoryIndex) => (
-                <motion.div
-                  key={category.id}
-                  id={category.id.toString()}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: animationConfig.card.enter.duration / 1000,
-                    ease: animationConfig.easings.easeInOut,
-                    delay:
-                      categoryIndex * animationConfig.card.enter.staggerDelay,
-                  }}
-                >
-                  <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                      <span className="mr-2 text-2xl">
-                        {category.icon || '📁'}
-                      </span>
-                      {category.title}
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-                      {category.nav.map((website, websiteIndex) => (
-                        <motion.a
-                          key={website.id}
-                          href={website.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block group"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            duration:
-                              animationConfig.card.enter.duration / 1000,
-                            ease: animationConfig.easings.easeInOut,
-                            delay:
-                              (websiteIndex *
-                                animationConfig.card.enter.staggerDelay) /
-                              2,
-                          }}
-                          whileHover={{
-                            y: animationConfig.card.hover.y,
-                            transition: {
-                              duration:
-                                animationConfig.card.hover.duration / 1000,
-                            },
-                          }}
-                        >
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full max-h-[90px] overflow-hidden">
-                            <div className="flex items-start">
-                              <div className="relative w-10 h-10 mr-3 flex-shrink-0">
-                                <OptimizedImage
-                                  src={website.icon}
-                                  alt={website.name}
-                                  width={40}
-                                  height={40}
-                                  className="w-10 h-10 rounded-lg object-cover"
-                                  fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0 flex flex-col">
-                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-1">
-                                  {website.name}
-                                </h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                                  {website.desc}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.a>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+          {children}
         </div>
       </div>
 
