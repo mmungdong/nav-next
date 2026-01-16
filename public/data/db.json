@@ -502,6 +502,13 @@
         "desc": "",
         "url": "https://linux.do/",
         "icon": "https://www.google.com/s2/favicons?domain=linux.do"
+      },
+      {
+        "id": 1768528341732,
+        "name": "图片 - 2dwallpapers",
+        "desc": "图片网站",
+        "url": "https://www.2dwallpapers.com ",
+        "icon": "https://www.google.com/s2/favicons?domain=www.2dwallpapers.com"
       }
     ]
   },
