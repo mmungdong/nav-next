@@ -280,6 +280,32 @@
     "icon": "",
     "nav": [
       {
+        "id": 1769138303480,
+        "name": "bestblogs",
+        "desc": "收集了很多高质量的技术文章",
+        "url": "https://www.bestblogs.dev/",
+        "icon": "https://www.google.com/s2/favicons?domain=www.bestblogs.dev"
+      },
+      {
+        "id": 1767578340158,
+        "name": "Jimmy Song",
+        "desc": "云原生 & AI",
+        "url": "https://jimmysong.io/zh/",
+        "icon": "https://www.google.com/s2/favicons?domain=jimmysong.io"
+      },
+      {
+        "id": 1059,
+        "name": "v2ex",
+        "desc": "",
+        "url": "https://www.v2ex.com",
+        "icon": "",
+        "tags": [],
+        "rate": 5,
+        "top": false,
+        "ownVisible": false,
+        "index": null
+      },
+      {
         "id": 924,
         "name": "首页 - HelloGitHub",
         "desc": "",
@@ -295,18 +321,6 @@
         "name": "知乎 - 逛逛 Github",
         "desc": "",
         "url": "https://www.zhihu.com/people/riao-11",
-        "icon": "",
-        "tags": [],
-        "rate": 5,
-        "top": false,
-        "ownVisible": false,
-        "index": null
-      },
-      {
-        "id": 1059,
-        "name": "v2ex",
-        "desc": "",
-        "url": "https://www.v2ex.com",
         "icon": "",
         "tags": [],
         "rate": 5,
@@ -384,13 +398,6 @@
         "top": false,
         "ownVisible": false,
         "index": null
-      },
-      {
-        "id": 1767578340158,
-        "name": "Jimmy Song",
-        "desc": "云原生 & AI",
-        "url": "https://jimmysong.io/zh/",
-        "icon": "https://www.google.com/s2/favicons?domain=jimmysong.io"
       }
     ]
   },
