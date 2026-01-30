@@ -147,6 +147,13 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
+      },
+      {
+        "id": 1769765146184,
+        "name": "1panel",
+        "desc": "",
+        "url": "https://1panel.yangfanbin.cn/",
+        "icon": "https://www.google.com/s2/favicons?domain=1panel.yangfanbin.cn"
       }
     ]
   },
