@@ -109,18 +109,11 @@
         ]
       },
       {
-        "id": 1070,
+        "id": 1770707639586,
         "name": "Openlist",
         "desc": "",
-        "url": "https://openlist.yangfanbin.cn",
-        "icon": "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.png",
-        "tags": [],
-        "rate": 5,
-        "top": true,
-        "ownVisible": false,
-        "topTypes": [
-          1
-        ]
+        "url": "http://112.126.68.95:20000/",
+        "icon": "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.png"
       },
       {
         "id": 1075,
