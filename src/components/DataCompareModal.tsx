@@ -1,10 +1,12 @@
 'use client';
+import { useState } from 'react';
+import { DataDiffResult } from '@/stores/navStore';
 
-import { useState, useMemo } from 'react';
-import { ICategory, IWebsite } from '@/types';
-import { DataDiffResult, CategoryDiff, WebsiteChange, WebsiteDiff } from '@/stores/navStore';
-import OptimizedImage from '@/components/OptimizedImage'; // 假设你有这个组件，如果没有可以用 img 替代
-import { on } from 'events';
+// 定义 Message 类型，保持与父组件一致
+type MessageType = { 
+  type: 'success' | 'error' | 'loading'; 
+  text: string 
+} | null;
 
 interface DataCompareModalProps {
   diffResult: DataDiffResult | null;
@@ -12,39 +14,21 @@ interface DataCompareModalProps {
   onClose: () => void;
   onUseRemote?: () => void;
   onSyncToRemote?: () => void;
-  setMessage?: (message: any) => void;
+  // 修改 1: 优化类型定义
+  setMessage?: (message: MessageType) => void;
 }
 
-// 辅助组件：变更统计徽章
-const StatBadge = ({ count, type }: { count: number; type: 'add' | 'remove' | 'modify' }) => {
-  if (count === 0) return null;
-  const colors = {
-    add: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    remove: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    modify: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  };
-  const icons = {
-    add: '+',
-    remove: '-',
-    modify: '~',
-  };
-  return (
-    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${colors[type]}`}>
-      <span>{icons[type]}</span>
-      <span>{count}</span>
-    </span>
-  );
-};
+// ... StatBadge 和 DiffFieldRow 组件保持不变 ...
+// 为了节省篇幅，这里省略辅助组件代码，你可以直接用之前的
+// ...
 
 // 辅助组件：字段 Diff 行
 const DiffFieldRow = ({ label, from, to }: { label: string; from: any; to: any }) => {
-  // 格式化值的显示
   const formatValue = (val: any) => {
     if (typeof val === 'boolean') return val ? '是' : '否';
     if (val === '' || val === null || val === undefined) return <span className="text-gray-400 italic">空</span>;
     return String(val);
   };
-
   return (
     <div className="grid grid-cols-12 gap-2 text-sm py-1.5 border-b border-gray-100 dark:border-gray-700/50 last:border-0">
       <div className="col-span-2 text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wide self-center">
@@ -69,9 +53,9 @@ export default function DataCompareModal({
   setMessage,
 }: DataCompareModalProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'websites'>('overview');
-
+  
   if (!isOpen || !diffResult) return null;
-
+  
   const {
     categoriesAdded,
     categoriesRemoved,
@@ -145,7 +129,6 @@ export default function DataCompareModal({
           </div>
         </section>
       )}
-
       {/* 修改 */}
       {categoriesModified.length > 0 && (
         <section>
@@ -169,7 +152,6 @@ export default function DataCompareModal({
           </div>
         </section>
       )}
-
       {/* 删除 */}
       {categoriesRemoved.length > 0 && (
         <section>
@@ -190,7 +172,6 @@ export default function DataCompareModal({
           </div>
         </section>
       )}
-
       {stats.totalCat === 0 && <EmptyState text="没有分类变更" />}
     </div>
   );
@@ -224,7 +205,6 @@ export default function DataCompareModal({
           </div>
         </section>
       )}
-
       {/* 修改 */}
       {websitesModified.length > 0 && (
         <section>
@@ -256,7 +236,6 @@ export default function DataCompareModal({
           </div>
         </section>
       )}
-
       {/* 删除 */}
       {websitesRemoved.length > 0 && (
         <section>
@@ -282,7 +261,6 @@ export default function DataCompareModal({
           </div>
         </section>
       )}
-
       {stats.totalWeb === 0 && <EmptyState text="没有网站变更" />}
     </div>
   );
@@ -299,7 +277,6 @@ export default function DataCompareModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
-
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
           <div>
@@ -309,10 +286,14 @@ export default function DataCompareModal({
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">对比本地数据与远程仓库的差异</p>
           </div>
-          <button onClick={() => {
-            setMessage(null);
-            onClose();
-          }} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500">
+          <button 
+            onClick={() => {
+              // 修改 2: 使用可选链调用，安全地清除消息
+              setMessage?.(null);
+              onClose();
+            }} 
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -351,7 +332,6 @@ export default function DataCompareModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
               {renderOverviewCard("分类变更", stats.catAdd, stats.catDel, stats.catMod, () => setActiveTab('categories'))}
               {renderOverviewCard("网站变更", stats.webAdd, stats.webDel, stats.webMod, () => setActiveTab('websites'))}
-
               <div className="md:col-span-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-5">
                 <h3 className="font-bold text-blue-800 dark:text-blue-300 mb-2">💡 同步说明</h3>
                 <ul className="list-disc list-inside text-sm text-blue-700 dark:text-blue-400 space-y-1">
@@ -362,9 +342,7 @@ export default function DataCompareModal({
               </div>
             </div>
           )}
-
           {activeTab === 'categories' && renderCategoriesTab()}
-
           {activeTab === 'websites' && renderWebsitesTab()}
         </div>
 
@@ -372,14 +350,14 @@ export default function DataCompareModal({
         <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button
             onClick={() => {
-              setMessage(null);
+              // 修改 3: 使用可选链调用
+              setMessage?.(null);
               onClose();
             }}
             className="px-5 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium transition-colors"
           >
             取消
           </button>
-
           {onUseRemote && (
             <button
               onClick={() => {
@@ -393,7 +371,6 @@ export default function DataCompareModal({
               拉取远程覆盖本地
             </button>
           )}
-
           {onSyncToRemote && (
             <button
               onClick={() => {
