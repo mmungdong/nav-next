@@ -33,23 +33,16 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
       url: 'https://www.google.com/search?q=',
     },
     {
-      id: 'baidu',
-      name: '百度',
-      icon: 'https://www.baidu.com/favicon.ico',
-      url: 'https://www.baidu.com/s?wd=',
-    },
-    {
       id: 'bing',
       name: 'Bing',
       icon: 'https://www.bing.com/favicon.ico',
       url: 'https://www.bing.com/search?q=',
     },
     {
-      id: 'internal',
-      name: '站内',
-      icon: '🌐',
-      url: '/search?q=',
-      isInternal: true,
+      id: 'baidu',
+      name: '百度',
+      icon: 'https://www.baidu.com/favicon.ico',
+      url: 'https://www.baidu.com/s?wd=',
     },
   ];
 
@@ -185,7 +178,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
 
               {/* 搜索引擎选项 */}
               <div className="p-4 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm">
-                <div className="grid grid-cols-4 gap-3 pb-2">
+                <div className="grid grid-cols-3 gap-3 pb-2">
                   {searchEngines.map((engine) => (
                     <motion.button
                       key={engine.id}

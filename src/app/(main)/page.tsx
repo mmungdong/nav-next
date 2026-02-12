@@ -1,160 +1,174 @@
 'use client';
-
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavStore } from '@/stores/navStore';
-import { useAuthStore } from '@/stores/authStore';
-import DefaultIcon, {
-  isIconUrlFailed,
-  markIconUrlAsFailed,
-} from '@/components/DefaultIcon';
-import OptimizedImage from '@/components/OptimizedImage';
 import { animationConfig } from '@/lib/animations';
+import { ICategory } from '@/types';
+import { useScrollSpy } from '@/hooks/useScrollSpy';
+import { WebsiteCard } from '@/components/WebsiteCard';
+import { CategoryNav } from '@/components/CategoryNav';
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
-  const { isAuthenticated } = useAuthStore();
-  const [searchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('');
-  const [userInitiatedNavigation, setUserInitiatedNavigation] = useState(false);
-  const [navigationLockEndTime, setNavigationLockEndTime] = useState(0);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
+  // 确保数据已加载
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // 过滤分类和网站
-  const filteredCategories = categories.filter((category) => {
-    // 检查分类标题是否匹配搜索查询
-    if (category.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return true;
-    }
+  // 1. 过滤逻辑 Memoization
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    const query = searchQuery.toLowerCase();
+    return categories
+      .map((category) => {
+        const categoryMatch = category.title.toLowerCase().includes(query);
+        const filteredNav = category.nav.filter(
+          (website) =>
+            website.name.toLowerCase().includes(query) ||
+            website.desc.toLowerCase().includes(query)
+        );
+        if (categoryMatch || filteredNav.length > 0) {
+          return {
+            ...category,
+            nav: filteredNav.length > 0 ? filteredNav : category.nav,
+          };
+        }
+        return null;
+      })
+      .filter((cat): cat is ICategory => cat !== null);
+  }, [categories, searchQuery]);
 
-    // 检查分类下的网站是否匹配搜索查询
-    return category.nav.some(
-      (website) =>
-        website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        website.desc.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  // 2. ScrollSpy ID 提取
+  const categoryIds = useMemo(
+    () => filteredCategories.map((c) => c.id.toString()),
+    [filteredCategories]
+  );
+
+  // 3. 滚动监听 Hook
+  const { activeId, scrollToSection } = useScrollSpy(categoryIds);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen w-full">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center h-[60vh] w-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {filteredCategories.length === 0 ? (
-        <div className="text-center py-12">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
-            未找到结果
-          </h3>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">
-            没有找到与 &quot;{searchQuery}&quot; 相关的分类或网站。
-          </p>
+    // 页面主容器：控制最大宽度和响应式边距
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      {/* 顶部 Hero 搜索区 */}
+      <div className="relative mb-12 max-w-3xl mx-auto text-center pt-8">
+        {/* 背景装饰光晕 */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-500/10 dark:bg-blue-500/20 blur-[80px] rounded-full -z-10 pointer-events-none" />
+
+        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-6 tracking-tight">
+          探索 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">优质资源</span>
+        </h1>
+
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
+            <svg className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-12 pr-4 py-4
+              bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl
+              border border-gray-200 dark:border-gray-700
+              rounded-2xl shadow-lg shadow-blue-500/5
+              text-gray-900 dark:text-white placeholder-gray-400
+              focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500
+              transition-all duration-300 text-base"
+            placeholder="搜索你感兴趣的工具、文档..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+            <kbd className="hidden sm:inline-flex items-center h-6 px-2 text-xs font-sans font-medium text-gray-400 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900">
+              ⌘ K
+            </kbd>
+          </div>
         </div>
-      ) : (
-        <div className="space-y-8">
-          {filteredCategories.map((category, categoryIndex) => (
-            <motion.div
-              key={category.id}
-              id={category.id.toString()}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: animationConfig.card.enter.duration / 1000,
-                ease: animationConfig.easings.easeInOut,
-                delay:
-                  categoryIndex * animationConfig.card.enter.staggerDelay,
-              }}
-            >
-              <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <span className="mr-2 text-2xl">
-                    {category.icon || '📁'}
-                  </span>
-                  {category.title}
-                </h2>
+      </div>
+
+      {/* 核心布局：侧边栏 + 内容区 */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start relative">
+
+        {/* 左侧：粘性侧边栏 (仅大屏显示) */}
+        {filteredCategories.length > 0 && (
+          <aside className="hidden lg:block w-64 flex-shrink-0 sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar">
+            <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-gray-700/50 p-2">
+              <CategoryNav
+                categories={filteredCategories}
+                activeId={activeId}
+                onSelect={scrollToSection}
+              />
+            </div>
+          </aside>
+        )}
+
+        {/* 右侧：主要内容区域 */}
+        <main className="flex-1 min-w-0 w-full space-y-12 pb-20">
+          {filteredCategories.length === 0 ? (
+            <div className="text-center py-20 bg-white/50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+                <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-                  {category.nav.map((website, websiteIndex) => (
-                    <motion.a
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">未找到相关结果</h3>
+              <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                没有找到与 &quot;{searchQuery}&quot; 相关的分类或网站。
+              </p>
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-4 text-blue-600 hover:text-blue-500 font-medium text-sm"
+              >
+                清除搜索
+              </button>
+            </div>
+          ) : (
+            filteredCategories.map((category) => (
+              <motion.div
+                key={category.id}
+                id={category.id.toString()}
+                className="scroll-mt-8"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{
+                  duration: animationConfig.card.enter.duration / 1000,
+                  ease: animationConfig.easings.easeInOut,
+                }}
+              >
+                <div className="flex items-center mb-6 pl-1">
+                  <span className="text-3xl mr-3 filter drop-shadow-sm">{category.icon || '📁'}</span>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                    {category.title}
+                  </h2>
+                </div>
+
+                {/* 响应式网格布局 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {category.nav.map((website, index) => (
+                    <WebsiteCard
                       key={website.id}
-                      href={website.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration:
-                          animationConfig.card.enter.duration / 1000,
-                        ease: animationConfig.easings.easeInOut,
-                        delay:
-                          (websiteIndex *
-                            animationConfig.card.enter.staggerDelay) /
-                          2,
-                      }}
-                      whileHover={{
-                        y: animationConfig.card.hover.y,
-                        transition: {
-                          duration:
-                            animationConfig.card.hover.duration / 1000,
-                        },
-                      }}
-                    >
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md flex flex-col h-full max-h-[90px] overflow-hidden">
-                        <div className="flex items-start">
-                          <div className="relative w-10 h-10 mr-3 flex-shrink-0">
-                            <OptimizedImage
-                              src={website.icon}
-                              alt={website.name}
-                              width={40}
-                              height={40}
-                              className="w-10 h-10 rounded-lg object-cover"
-                              fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col">
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-1">
-                              {website.name}
-                            </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                              {website.desc}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.a>
+                      website={website}
+                      index={index}
+                    />
                   ))}
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+              </motion.div>
+            ))
+          )}
+        </main>
+      </div>
     </div>
   );
 }
