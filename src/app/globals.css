@@ -63,15 +63,33 @@ body {
   }
 }
 
-/* === 2. 点阵背景纹理 === */
-.bg-dot-pattern {
-  background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
-  background-size: 24px 24px;
+/* === 2. 科技感微网格背景 (Tech Grid) === */
+.bg-grid-pattern {
+  /* 定义网格颜色变量，使用极低的不透明度 */
+  --grid-color: color-mix(in srgb, var(--color-gray-900) 3%, transparent);
+
+  /* 创建网格：水平线 + 垂直线 */
+  background-image:
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+
+  /* 网格大小 */
+  background-size: 40px 40px;
+
+  /* 关键：使用 mask 让网格只在顶部和中心显示，向下淡出 */
+  /* 这样底部内容多的时候背景不会显得乱 */
+  mask-image: radial-gradient(ellipse at top center, black 40%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse at top center, black 40%, transparent 90%);
+
+  /* 固定背景，不随滚动条滚动 */
+  background-attachment: fixed;
 }
 
-.dark .bg-dot-pattern {
-  background-image: radial-gradient(#374151 1px, transparent 1px);
+/* 深色模式下的网格颜色 */
+.dark .bg-grid-pattern {
+  --grid-color: color-mix(in srgb, var(--color-white) 5%, transparent);
 }
+
 
 /* === 3. 选中文字颜色 === */
 ::selection {

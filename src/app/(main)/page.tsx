@@ -66,10 +66,6 @@ export default function Home() {
         {/* 背景装饰光晕 */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-500/10 dark:bg-blue-500/20 blur-[80px] rounded-full -z-10 pointer-events-none" />
 
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-6 tracking-tight">
-          探索 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">优质资源</span>
-        </h1>
-
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
             <svg className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
