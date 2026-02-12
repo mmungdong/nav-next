@@ -8,11 +8,25 @@ import { useScrollSpy } from '@/hooks/useScrollSpy';
 import { WebsiteCard } from '@/components/WebsiteCard';
 import { CategoryNav } from '@/components/CategoryNav';
 
+// 1. 定义统一的文件夹图标组件 (与侧边栏保持一致)
+const FolderIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 2H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+  </svg>
+);
+
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 确保数据已加载
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
@@ -58,12 +72,10 @@ export default function Home() {
   }
 
   return (
-    // 页面主容器：控制最大宽度和响应式边距
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* 顶部 Hero 搜索区 */}
       <div className="relative mb-12 max-w-3xl mx-auto text-center pt-8">
-        {/* 背景装饰光晕 */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-500/10 dark:bg-blue-500/20 blur-[80px] rounded-full -z-10 pointer-events-none" />
 
         <div className="relative group">
@@ -93,10 +105,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 核心布局：侧边栏 + 内容区 */}
       <div className="flex flex-col lg:flex-row gap-8 items-start relative">
 
-        {/* 左侧：粘性侧边栏 (仅大屏显示) */}
+        {/* 左侧：粘性侧边栏 */}
         {filteredCategories.length > 0 && (
           <aside className="hidden lg:block w-64 flex-shrink-0 sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar">
             <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-gray-700/50 p-2">
@@ -143,14 +154,20 @@ export default function Home() {
                   ease: animationConfig.easings.easeInOut,
                 }}
               >
+                {/* 2. 这里的标题区也进行了逻辑替换 */}
                 <div className="flex items-center mb-6 pl-1">
-                  <span className="text-3xl mr-3 filter drop-shadow-sm">{category.icon || '📁'}</span>
+                  <span className="mr-3 flex items-center justify-center">
+                    {category.icon ? (
+                      <span className="text-3xl filter drop-shadow-sm leading-none">{category.icon}</span>
+                    ) : (
+                      <FolderIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    )}
+                  </span>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                     {category.title}
                   </h2>
                 </div>
 
-                {/* 响应式网格布局 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {category.nav.map((website, index) => (
                     <WebsiteCard
