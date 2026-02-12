@@ -1,9 +1,6 @@
 'use client';
-
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavStore } from '@/stores/navStore';
-import DefaultIcon, { isIconUrlFailed } from '@/components/DefaultIcon';
-import OptimizedImage from '@/components/OptimizedImage';
 import { ICategory, IWebsite } from '@/types';
 import EditWebsiteModal from '@/components/EditWebsiteModal';
 import EditCategoryModal from '@/components/EditCategoryModal';
@@ -12,10 +9,10 @@ import MoveWebsiteModal from '@/components/MoveWebsiteModal';
 import CategorySortModal from '@/components/CategorySortModal';
 import WebsiteSortModal from '@/components/WebsiteSortModal';
 import { useAuthStore } from '@/stores/authStore';
-import { updateFileContent, getFileContent } from '@/lib/githubApi';
 import MessageDisplay from '@/components/MessageDisplay';
-import DataCompareModal from '@/components/DataCompareModal'; // 新增：数据比较模态框
-import { DataDiffResult } from '@/stores/navStore'; // 新增：导入差异结果类型
+import DataCompareModal from '@/components/DataCompareModal';
+import { DataDiffResult } from '@/stores/navStore';
+import WebsiteCardAdmin from '@/components/WebsiteCardAdmin'; // 新增组件
 
 export default function WebManagementPage() {
   const {
@@ -24,126 +21,116 @@ export default function WebManagementPage() {
     fetchCategories,
     saveCategories,
     getLastSyncTime,
-    checkDataSync, // 添加数据同步检查函数
-    fetchRemoteData, // 添加获取远程数据函数
-    hasDataChanged, // 添加数据比较函数
-    compareData, // 添加数据差异比较函数
+    checkDataSync,
+    fetchRemoteData,
+    compareData,
   } = useNavStore();
+
   const { githubToken } = useAuthStore();
+
+  // 状态管理
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewingCategory, setViewingCategory] = useState<ICategory | null>(
-    null
-  ); // 当前查看的分类
-  const [editingWebsite, setEditingWebsite] = useState<IWebsite | undefined>(
-    undefined
-  );
+  const [viewingCategory, setViewingCategory] = useState<ICategory | null>(null);
+
+  // Modals 状态
+  const [editingWebsite, setEditingWebsite] = useState<IWebsite | undefined>(undefined);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<ICategory | undefined>(
-    undefined
-  );
+  const [editingCategory, setEditingCategory] = useState<ICategory | undefined>(undefined);
   const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
   const [deletingWebsite, setDeletingWebsite] = useState<IWebsite | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingCategory, setDeletingCategory] = useState<ICategory | null>(
-    null
-  );
-  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] =
-    useState(false);
-  const [movingWebsite, setMovingWebsite] = useState<IWebsite | undefined>(
-    undefined
-  );
+  const [deletingCategory, setDeletingCategory] = useState<ICategory | null>(null);
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
+  const [movingWebsite, setMovingWebsite] = useState<IWebsite | undefined>(undefined);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(null);
+
+  // 同步与消息状态
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [message, setMessage] = useState<{
-    type: 'success' | 'error' | 'loading';
-    text: string;
-  } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'loading'; text: string } | null>(null);
   const [isMessageVisible, setIsMessageVisible] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [showSyncNotification, setShowSyncNotification] = useState(false); // 新增：显示同步通知状态
-  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null); // 新增：同步检查定时器引用
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false); // 新增：比较模态框状态
-  const [diffResult, setDiffResult] = useState<DataDiffResult | null>(null); // 新增：差异结果状态
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  const [diffResult, setDiffResult] = useState<DataDiffResult | null>(null);
 
-  // 防抖函数
-  const debounce = <T extends readonly any[]>(
-    func: (...args: T) => void,
-    delay: number
-  ) => {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: T): void => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
-  };
-
-  // 防抖版本的fetchCategories
-  const debouncedFetchCategories = useCallback(() => {
-    debounce(() => {
-      fetchCategories();
-    }, 300)(); // 300ms 防抖延迟
-  }, [fetchCategories]);
-  const hasInitialized = useRef(false);
+  // 排序状态
   const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
-  const [sortingCategory, setSortingCategory] = useState<ICategory | null>(
-    null
-  );
+  const [sortingCategory, setSortingCategory] = useState<ICategory | null>(null);
   const [isWebsiteSortModalOpen, setIsWebsiteSortModalOpen] = useState(false);
 
-  // 编辑网站
-  const handleEditWebsite = (website: IWebsite) => {
-    setEditingWebsite(website);
-    setIsEditModalOpen(true);
+  // --- 核心逻辑优化：使用 useMemo 缓存搜索结果，避免重复计算 ---
+  const { filteredCategories, filteredWebsites } = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { filteredCategories: categories, filteredWebsites: [] };
+    }
+
+    const lowerQuery = searchQuery.toLowerCase();
+    const matchedCategories: ICategory[] = [];
+    const matchedWebsites: { category: ICategory; website: IWebsite }[] = [];
+
+    categories.forEach((category) => {
+      // 匹配分类
+      if (category.title.toLowerCase().includes(lowerQuery)) {
+        matchedCategories.push(category);
+      }
+      // 匹配网站
+      category.nav.forEach((website) => {
+        if (
+          website.name.toLowerCase().includes(lowerQuery) ||
+          website.desc.toLowerCase().includes(lowerQuery) ||
+          website.url.toLowerCase().includes(lowerQuery)
+        ) {
+          matchedWebsites.push({ category, website });
+        }
+      });
+    });
+
+    return { filteredCategories: matchedCategories, filteredWebsites: matchedWebsites };
+  }, [searchQuery, categories]);
+
+  // --- CRUD 操作处理 ---
+
+  // 显示消息辅助函数
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    setIsMessageVisible(true);
+    setTimeout(() => {
+      setMessage(null);
+      setIsMessageVisible(false);
+    }, 3000);
+  };
+
+  // 更新最后同步时间
+  const updateSyncTime = () => {
+    const currentTime = new Date().toISOString();
+    setLastSyncTime(currentTime);
   };
 
   // 保存网站
   const handleSaveWebsite = async (website: IWebsite) => {
     try {
-      // 更新本地状态
       const updatedCategories = categories.map((category) => {
         if (category.id === selectedCategory?.id) {
-          // 检查是否是编辑现有网站还是添加新网站
-          const existingWebsiteIndex = category.nav.findIndex(
-            (w) => w.id === website.id
-          );
-
+          const existingIndex = category.nav.findIndex((w) => w.id === website.id);
           let updatedNav;
-          if (existingWebsiteIndex >= 0) {
-            // 编辑现有网站
-            updatedNav = category.nav.map((w, index) =>
-              index === existingWebsiteIndex ? website : w
-            );
+          if (existingIndex >= 0) {
+            updatedNav = category.nav.map((w, index) => (index === existingIndex ? website : w));
           } else {
-            // 添加新网站
             updatedNav = [...category.nav, website];
           }
-
           return { ...category, nav: updatedNav };
         }
         return category;
       });
 
-      // 保存到本地存储
       await saveCategories(updatedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 关闭modal
+      updateSyncTime();
       setIsEditModalOpen(false);
       setEditingWebsite(undefined);
+      showMessage('success', '网站保存成功');
     } catch (error) {
       console.error('保存网站失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '保存网站失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
+      showMessage('error', '保存网站失败');
     }
   };
 
@@ -154,41 +141,22 @@ export default function WebManagementPage() {
     setIsDeleteModalOpen(true);
   };
 
-  // 确认删除网站
   const confirmDeleteWebsite = async () => {
     if (!deletingWebsite || !selectedCategory) return;
-
     try {
-      // 更新本地状态
       const updatedCategories = categories.map((category) => {
         if (category.id === selectedCategory.id) {
-          const updatedNav = category.nav.filter(
-            (w) => w.id !== deletingWebsite.id
-          );
-          return { ...category, nav: updatedNav };
+          return { ...category, nav: category.nav.filter((w) => w.id !== deletingWebsite.id) };
         }
         return category;
       });
-
-      // 保存到本地存储
       await saveCategories(updatedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 关闭modal
+      updateSyncTime();
       setIsDeleteModalOpen(false);
       setDeletingWebsite(null);
-      setSelectedCategory(null);
+      showMessage('success', '网站已删除');
     } catch (error) {
-      console.error('删除网站失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '删除网站失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
+      showMessage('error', '删除失败');
     }
   };
 
@@ -199,910 +167,390 @@ export default function WebManagementPage() {
     setIsMoveModalOpen(true);
   };
 
-  // 添加网站到分类
-  const handleAddWebsite = (category: ICategory) => {
-    setSelectedCategory(category);
-    setEditingWebsite(undefined); // 添加新模式
-    setIsEditModalOpen(true);
+  const confirmMoveWebsite = async (targetCategoryId: number) => {
+    if (!movingWebsite || !selectedCategory) return;
+    try {
+      let updatedCategories = categories.map((cat) => {
+        // 移除
+        if (cat.id === selectedCategory.id) {
+          return { ...cat, nav: cat.nav.filter((w) => w.id !== movingWebsite.id) };
+        }
+        return cat;
+      });
+
+      // 添加
+      updatedCategories = updatedCategories.map((cat) => {
+        if (cat.id === targetCategoryId) {
+          return { ...cat, nav: [...cat.nav, movingWebsite] };
+        }
+        return cat;
+      });
+
+      await saveCategories(updatedCategories);
+      updateSyncTime();
+      setIsMoveModalOpen(false);
+      setMovingWebsite(undefined);
+      showMessage('success', '移动成功');
+    } catch (error) {
+      showMessage('error', '移动失败');
+    }
   };
 
-  // 添加分类
+  // 分类操作
   const handleAddCategory = () => {
-    setEditingCategory(undefined); // 添加新模式
+    setEditingCategory(undefined);
     setIsEditCategoryModalOpen(true);
   };
 
-  // 编辑分类
   const handleEditCategory = (category: ICategory) => {
     setEditingCategory(category);
     setIsEditCategoryModalOpen(true);
   };
 
-  // 保存分类
   const handleSaveCategory = async (category: ICategory) => {
     try {
       let updatedCategories;
-
       if (editingCategory) {
-        // 编辑现有分类
         updatedCategories = categories.map((cat) =>
           cat.id === category.id ? { ...category, nav: cat.nav || [] } : cat
         );
       } else {
-        // 添加新分类
-        const newCategory = {
-          ...category,
-          nav: category.nav || [], // 确保新分类有nav数组
-        };
-        updatedCategories = [...categories, newCategory];
+        updatedCategories = [...categories, { ...category, nav: [] }];
       }
-
-      // 保存到本地存储
       await saveCategories(updatedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 关闭modal
+      updateSyncTime();
       setIsEditCategoryModalOpen(false);
       setEditingCategory(undefined);
+      showMessage('success', '分类保存成功');
     } catch (error) {
-      console.error('保存分类失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '保存分类失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
+      showMessage('error', '分类保存失败');
     }
   };
 
-  // 删除分类
   const handleDeleteCategory = (category: ICategory) => {
     setDeletingCategory(category);
     setIsDeleteCategoryModalOpen(true);
   };
 
-  // 确认删除分类
   const confirmDeleteCategory = async () => {
     if (!deletingCategory) return;
-
     try {
-      // 从分类列表中移除该分类
-      const updatedCategories = categories.filter(
-        (cat) => cat.id !== deletingCategory.id
-      );
-
-      // 保存到本地存储
+      const updatedCategories = categories.filter((cat) => cat.id !== deletingCategory.id);
       await saveCategories(updatedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
+      updateSyncTime();
       setIsDeleteCategoryModalOpen(false);
       setDeletingCategory(null);
+      showMessage('success', '分类已删除');
     } catch (error) {
-      console.error('删除分类失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '删除分类失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
+      showMessage('error', '删除分类失败');
     }
   };
 
-  // 保存分类排序
+  // 排序相关
   const handleSaveCategorySort = async (sortedCategories: ICategory[]) => {
-    try {
-      // 保存到本地存储
-      await saveCategories(sortedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 关闭modal
-      setIsCategorySortModalOpen(false);
-    } catch (error) {
-      console.error('保存分类排序失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '保存分类排序失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-    }
+    await saveCategories(sortedCategories);
+    updateSyncTime();
+    setIsCategorySortModalOpen(false);
+    showMessage('success', '分类排序已保存');
   };
 
-  // 保存网站排序
-  const handleSaveWebsiteSort = async (
-    categoryId: number,
-    sortedWebsites: IWebsite[]
-  ) => {
-    try {
-      // 更新本地状态
-      const updatedCategories = categories.map((category) => {
-        if (category.id === categoryId) {
-          return { ...category, nav: sortedWebsites };
-        }
-        return category;
-      });
-
-      // 保存到本地存储
-      await saveCategories(updatedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 关闭modal
-      setIsWebsiteSortModalOpen(false);
-      setSortingCategory(null);
-    } catch (error) {
-      console.error('保存网站排序失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '保存网站排序失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-    }
+  const handleSaveWebsiteSort = async (categoryId: number, sortedWebsites: IWebsite[]) => {
+    const updatedCategories = categories.map((cat) =>
+      cat.id === categoryId ? { ...cat, nav: sortedWebsites } : cat
+    );
+    await saveCategories(updatedCategories);
+    updateSyncTime();
+    setIsWebsiteSortModalOpen(false);
+    showMessage('success', '网站排序已保存');
   };
 
-  // 显示网站排序模态框
-  const handleShowWebsiteSort = (category: ICategory) => {
-    setSortingCategory(category);
-    setIsWebsiteSortModalOpen(true);
-  };
-
-  // 确认移动网站
-  const confirmMoveWebsite = async (targetCategoryId: number) => {
-    if (!movingWebsite || !selectedCategory) return;
-
-    try {
-      // 更新本地状态
-      let updatedCategories = [...categories];
-
-      // 从原分类中删除
-      updatedCategories = updatedCategories.map((category) => {
-        if (category.id === selectedCategory.id) {
-          const updatedNav = category.nav.filter(
-            (w) => w.id !== movingWebsite.id
-          );
-          return { ...category, nav: updatedNav };
-        }
-        return category;
-      });
-
-      // 添加到目标分类
-      updatedCategories = updatedCategories.map((category) => {
-        if (category.id === targetCategoryId) {
-          const updatedNav = [...category.nav, movingWebsite];
-          return { ...category, nav: updatedNav };
-        }
-        return category;
-      });
-
-      // 保存到本地存储
-      await saveCategories(updatedCategories);
-
-      // 更新最后同步时间状态为当前时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 如果有GitHub Token，同步到GitHub
-      if (githubToken) {
-        // 关闭所有modal框，避免用户多次点击
-        setIsMoveModalOpen(false);
-        setMovingWebsite(undefined);
-        setSelectedCategory(null);
-      } else {
-        // 如果没有GitHub Token，仍然关闭modal
-        setIsMoveModalOpen(false);
-        setMovingWebsite(undefined);
-        setSelectedCategory(null);
-      }
-    } catch (error) {
-      console.error('移动网站失败:', error);
-      // 如果同步失败，显示错误信息
-      setMessage({ type: 'error', text: '移动网站失败，请重试' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-    }
-  };
-
-  // 清理未使用的变量和函数
-
-  // 检查本地和远程数据是否同步
-  const checkSyncStatus = async () => {
-    if (!githubToken) return true; // 没有GitHub Token则跳过检查
-
-    try {
-      const isSynced = await checkDataSync(githubToken);
-
-      if (!isSynced) {
-        // 数据不同步，显示通知
-        setShowSyncNotification(true);
-        setMessage({
-          type: 'error',
-          text: '检测到远程数据有更新，请同步您的本地数据',
-        });
-        setTimeout(() => {
-          setMessage(null);
-          setIsMessageVisible(false);
-        }, 5000);
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('检查同步状态失败:', error);
-      return true; // 出错时继续执行
-    }
-  };
-
-  // 比较本地和远程数据的差异
+  // 数据同步相关
   const handleCompareData = async () => {
-    if (!githubToken) {
-      setMessage({ type: 'error', text: '请先配置GitHub Token' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-      return;
-    }
+    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
+    setMessage({ type: 'loading', text: '正在获取远程数据...' });
+    setIsMessageVisible(true);
 
     try {
-      // 显示加载状态
-      setMessage({ type: 'loading', text: '正在比较数据差异...' });
-      setIsMessageVisible(true);
-
-      // 获取远程数据
       const remoteData = await fetchRemoteData(githubToken);
-      if (!remoteData) {
-        setMessage({ type: 'error', text: '无法获取远程数据' });
-        setTimeout(() => {
-          setMessage(null);
-          setIsMessageVisible(false);
-        }, 5000);
-        return;
+      if (remoteData) {
+        const diff = compareData(categories, remoteData);
+        setDiffResult(diff);
+        setIsCompareModalOpen(true);
+      } else {
+        showMessage('error', '无法获取远程数据');
       }
-
-      // 比较本地和远程数据
-      const localData = categories;
-      const diff = compareData(localData, remoteData);
-
-      // 设置差异结果并打开模态框
-      setDiffResult(diff);
-      setIsCompareModalOpen(true);
-
-      // 隐藏加载状态
-      setMessage(null);
-      setIsMessageVisible(false);
     } catch (error) {
-      console.error('比较数据失败:', error);
-      setMessage({
-        type: 'error',
-        text: '比较数据失败: ' + (error as Error).message,
-      });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
+      showMessage('error', '比较失败: ' + (error as Error).message);
+    } finally {
+      if (message?.type === 'loading') setIsMessageVisible(false);
     }
   };
 
-  // 使用远程配置 - 删除本地配置并刷新页面
-  const handleUseRemoteConfig = async () => {
-    if (!githubToken) {
-      setMessage({ type: 'error', text: '请先配置GitHub Token' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-      return;
-    }
-
-    try {
-      // 显示加载状态
-      setMessage({ type: 'loading', text: '正在获取远程配置...' });
-      setIsMessageVisible(true);
-
-      // 获取远程数据
-      const remoteData = await fetchRemoteData(githubToken);
-      if (!remoteData) {
-        setMessage({ type: 'error', text: '无法获取远程数据' });
-        setTimeout(() => {
-          setMessage(null);
-          setIsMessageVisible(false);
-        }, 5000);
-        return;
-      }
-
-      // 保存远程数据到本地存储
-      await saveCategories(remoteData);
-
-      // 更新状态
-      // 注意：我们不再调用全局的fetchCategories，而是直接更新状态
-      // 使用navStore的updateCategories方法更新状态
-      // 注意：需要从useNavStore中解构updateCategories
-      // 如果updateCategories不存在，我们使用saveCategories，它也会更新状态
-
-      // 更新最后同步时间
-      const currentTime = new Date().toISOString();
-      setLastSyncTime(currentTime);
-
-      // 关闭模态框
-      setIsCompareModalOpen(false);
-
-      // 显示成功消息
-      setMessage({ type: 'success', text: '已使用远程配置并刷新页面' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-
-        // 刷新页面以应用新配置
-        window.location.reload();
-      }, 2000);
-    } catch (error) {
-      console.error('使用远程配置失败:', error);
-      setMessage({
-        type: 'error',
-        text: '使用远程配置失败: ' + (error as Error).message,
-      });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-    }
-  };
-
-  // 同步本地配置到远程
-  const handleSyncToLocalRemote = async () => {
-    if (!githubToken) {
-      setMessage({ type: 'error', text: '请先配置GitHub Token' });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-      return;
-    }
-
-    try {
-      // 显示加载状态
-      setMessage({ type: 'loading', text: '正在同步到远程...' });
-      setIsMessageVisible(true);
-
-      // 推送模式：将本地数据推送到远程
-      const owner = 'mmungdong'; // 替换为实际的仓库所有者
-      const repo = 'nav-next'; // 替换为实际的仓库名
-      const path = 'public/data/db.json';
-      const branch = 'main';
-
-      // 获取当前文件的SHA
-      const fileInfo = await getFileContent(
-        githubToken,
-        owner,
-        repo,
-        path,
-        branch
-      );
-
-      // 准备文件内容
-      const content = JSON.stringify(categories, null, 2);
-
-      // 更新或创建文件
-      await updateFileContent(
-        githubToken,
-        owner,
-        repo,
-        path,
-        content,
-        `Update website data: ${new Date().toISOString()}`,
-        branch,
-        fileInfo.sha || undefined // 如果文件不存在，sha为undefined
-      );
-
-      // 关闭模态框
-      setIsCompareModalOpen(false);
-
-      // 检查是否有错误消息
-      if (message?.type !== 'error') {
-        // 如果没有错误，设置成功消息
-        setMessage({ type: 'success', text: '已同步本地配置到远程' });
-        setTimeout(() => {
-          setMessage(null);
-          setIsMessageVisible(false);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('同步到远程失败:', error);
-      let errorMessage = (error as Error).message || '未知错误';
-
-      // 为私有仓库问题提供更明确的指导
-      if (
-        errorMessage.includes('无法访问私有仓库') ||
-        errorMessage.includes('Resource not accessible')
-      ) {
-        errorMessage +=
-          '。请确保：\n1. GitHub Token具有完整的repo权限\n2. 您对私有仓库有访问权限\n3. 如果属于组织，检查是否需要SSO授权';
-      }
-
-      setMessage({
-        type: 'error',
-        text: '同步到远程失败: ' + errorMessage,
-      });
-      setTimeout(() => {
-        setMessage(null);
-        setIsMessageVisible(false);
-      }, 5000);
-    }
-  };
-
-  // 设置定时检查同步状态
-  useEffect(() => {
-    if (githubToken) {
-      checkSyncStatus();
-    }
-  }, []);
-
+  // 初始化
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
-
-  useEffect(() => {
-    // 获取最后同步时间
     const lastSync = getLastSyncTime();
-    if (lastSync) {
-      setLastSyncTime(lastSync);
-    }
-  }, [getLastSyncTime, setLastSyncTime]);
+    if (lastSync) setLastSyncTime(lastSync);
+  }, [fetchCategories, getLastSyncTime]);
 
-  // 使用原始分类顺序，不进行额外排序
-  const sortedCategories = categories;
+  // 添加网站
+  const handleAddWebsite = (category: ICategory) => {
+    setSelectedCategory(category);
+    setEditingWebsite(undefined);
+    setIsEditModalOpen(true);
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-500">加载数据中...</p>
+        </div>
       </div>
     );
   }
 
-  // 站内搜索逻辑 - 分类和网站分开显示
-  const { filteredCategories, filteredWebsites } = searchQuery.trim()
-    ? (() => {
-        // 分别筛选匹配的分类和网站
-        const matchedCategories: ICategory[] = [];
-        const matchedWebsites: { category: ICategory; website: IWebsite }[] =
-          [];
-
-        sortedCategories.forEach((category) => {
-          // 检查分类标题是否匹配（用于分类搜索）
-          if (
-            category.title.toLowerCase().includes(searchQuery.toLowerCase())
-          ) {
-            matchedCategories.push(category);
-          }
-
-          // 检查该分类下的网站是否匹配（用于网站搜索）
-          category.nav.forEach((website) => {
-            if (
-              website.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              website.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              website.url.toLowerCase().includes(searchQuery.toLowerCase())
-            ) {
-              matchedWebsites.push({ category, website });
-            }
-          });
-        });
-
-        return {
-          filteredCategories: matchedCategories,
-          filteredWebsites: matchedWebsites,
-        };
-      })()
-    : { filteredCategories: sortedCategories, filteredWebsites: [] };
-
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-8">
       <MessageDisplay message={message} isMessageVisible={isMessageVisible} />
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            网站管理
-          </h1>
-          {lastSyncTime && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              最后同步: {new Date(lastSyncTime).toLocaleString()}
-            </p>
-          )}
-        </div>
-        <div className="flex space-x-2">
-          {githubToken && (
-            <>
+
+      {/* 顶部 Header */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+              网站管理控制台
+            </h1>
+            {lastSyncTime && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                最后同步: {new Date(lastSyncTime).toLocaleString()}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {githubToken && (
               <button
-                className={`bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="flex items-center px-4 py-2 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/20 transition-all font-medium"
                 onClick={handleCompareData}
                 disabled={isSyncing}
               >
-                {isSyncing ? '比较中...' : '比较差异'}
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                数据同步
               </button>
-            </>
-          )}
-          <button
-            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors"
-            onClick={() => setIsCategorySortModalOpen(true)}
-          >
-            分类排序
-          </button>
-          <button
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
-            onClick={handleAddCategory}
-          >
-            添加分类
-          </button>
+            )}
+            <button
+              className="flex items-center px-4 py-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500/20 transition-all font-medium"
+              onClick={() => setIsCategorySortModalOpen(true)}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+              分类排序
+            </button>
+            <button
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all font-medium"
+              onClick={handleAddCategory}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              新建分类
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* 搜索栏 */}
-      <div className="mb-6">
-        <div className="relative">
+        {/* 搜索栏 */}
+        <div className="relative max-w-2xl">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
           <input
             type="text"
-            placeholder="搜索分类或网站..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="block w-full pl-10 pr-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-white dark:bg-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm shadow-sm transition-all"
+            placeholder="搜索网站名称、描述或 URL..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <svg
-            className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              clipRule="evenodd"
-            />
-          </svg>
         </div>
       </div>
 
-      {/* 搜索结果 */}
-      {searchQuery.trim() ? (
-        <div className="space-y-6">
-          {/* 分类搜索结果 - 只有在没有选中分类时显示 */}
-          {filteredCategories.length > 0 && !viewingCategory && (
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                匹配的分类
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredCategories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex items-center cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      // 直接设置当前查看的分类
-                      setViewingCategory(category);
-                    }}
-                  >
-                    <span className="text-2xl mr-3">{category.icon}</span>
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">
-                        {category.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {category.nav.length} 个网站
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 显示选中的分类及其网站 - 只在选中分类时显示 */}
-          {viewingCategory && (
-            <div>
-              <div className="flex items-center mb-4">
-                <button
-                  className="text-blue-500 hover:text-blue-700 mr-4 flex items-center"
-                  onClick={() => setViewingCategory(null)}
-                >
-                  <svg
-                    className="w-5 h-5 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                    />
-                  </svg>
-                  返回搜索
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {viewingCategory.icon} {viewingCategory.title}
-                </h2>
-              </div>
-
-              {viewingCategory.nav.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  该分类下没有网站
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {viewingCategory.nav.map((website) => (
+      {/* 主要内容区域 */}
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* 搜索模式 */}
+        {searchQuery.trim() ? (
+          <>
+            {/* 搜索到的分类 */}
+            {filteredCategories.length > 0 && !viewingCategory && (
+              <section>
+                <h2 className="text-lg font-semibold mb-4 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">匹配的分类</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {filteredCategories.map((category) => (
                     <div
-                      key={website.id}
-                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col transition-all duration-200 hover:shadow-md min-h-[150px]"
+                      key={category.id}
+                      onClick={() => setViewingCategory(category)}
+                      className="group bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer transition-all shadow-sm hover:shadow-md"
                     >
-                      <div className="flex items-start">
-                        <>
-                          <OptimizedImage
-                            src={website.icon}
-                            alt={website.name}
-                            width={40}
-                            height={40}
-                            className="rounded-lg object-cover mr-3 flex-shrink-0"
-                            fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
-                          />
-                        </>
-                        <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-                          <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {website.name}
-                          </h4>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex-1 line-clamp-2">
-                            {website.desc}
-                          </p>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-3xl bg-gray-100 dark:bg-gray-700 w-12 h-12 flex items-center justify-center rounded-lg group-hover:scale-110 transition-transform">
+                          {category.icon || '📂'}
+                        </span>
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-white">{category.title}</h3>
+                          <p className="text-sm text-gray-500">{category.nav.length} 个资源</p>
                         </div>
-                      </div>
-
-                      <div className="mt-3 flex justify-end space-x-2">
-                        <button
-                          className="text-blue-500 hover:text-blue-700 text-sm"
-                          onClick={() => handleEditWebsite(website)}
-                        >
-                          编辑
-                        </button>
-                        <button
-                          className="text-green-500 hover:text-green-700 text-sm"
-                          onClick={() =>
-                            handleMoveWebsite(website, viewingCategory)
-                          }
-                        >
-                          移动
-                        </button>
-                        <button
-                          className="text-red-500 hover:text-red-700 text-sm"
-                          onClick={() =>
-                            handleDeleteWebsite(website, viewingCategory)
-                          }
-                        >
-                          删除
-                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
+              </section>
+            )}
 
-          {/* 网站搜索结果 - 只在没有选中分类时显示 */}
-          {filteredWebsites.length > 0 && !viewingCategory && (
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                匹配的网站
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredWebsites.map(({ category, website }) => (
-                  <div
-                    key={website.id}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col transition-all duration-200 hover:shadow-md min-h-[150px]"
-                  >
-                    <div className="flex items-start">
-                      <>
-                        <OptimizedImage
-                          src={website.icon}
-                          alt={website.name}
-                          width={40}
-                          height={40}
-                          className="rounded-lg object-cover mr-3 flex-shrink-0"
-                          fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
-                        />
-                      </>
-                      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {website.name}
-                        </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex-1 line-clamp-2">
-                          {website.desc}
-                        </p>
-                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          {category.title}
-                        </div>
-                      </div>
-                    </div>
+            {/* 搜索到的网站 */}
+            {(filteredWebsites.length > 0 || viewingCategory) && (
+              <section>
+                 <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-xs">
+                      {viewingCategory ? `分类: ${viewingCategory.title}` : '匹配的网站'}
+                    </h2>
+                    {viewingCategory && (
+                      <button
+                        onClick={() => setViewingCategory(null)}
+                        className="text-sm text-blue-500 hover:text-blue-600 flex items-center"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        返回所有结果
+                      </button>
+                    )}
+                 </div>
 
-                    <div className="mt-3 flex justify-end space-x-2">
-                      <button
-                        className="text-blue-500 hover:text-blue-700 text-sm"
-                        onClick={() => handleEditWebsite(website)}
-                      >
-                        编辑
-                      </button>
-                      <button
-                        className="text-green-500 hover:text-green-700 text-sm"
-                        onClick={() => handleMoveWebsite(website, category)}
-                      >
-                        移动
-                      </button>
-                      <button
-                        className="text-red-500 hover:text-red-700 text-sm"
-                        onClick={() => handleDeleteWebsite(website, category)}
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                  {(viewingCategory ? viewingCategory.nav : filteredWebsites.map(fw => fw.website)).map((website) => {
+                    // 如果是搜索结果，我们需要找到对应的 category 传给 Card
+                    const category = viewingCategory || filteredWebsites.find(fw => fw.website.id === website.id)?.category;
+                    if (!category) return null;
+
+                    return (
+                      <WebsiteCardAdmin
+                        key={website.id}
+                        website={website}
+                        categoryName={category.title}
+                        onEdit={() => {
+                          setSelectedCategory(category);
+                          setEditingWebsite(website);
+                          setIsEditModalOpen(true);
+                        }}
+                        onDelete={() => handleDeleteWebsite(website, category)}
+                        onMove={() => handleMoveWebsite(website, category)}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {filteredCategories.length === 0 && filteredWebsites.length === 0 && (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-medium text-gray-900 dark:text-white">未找到相关内容</h3>
+                <p className="text-gray-500 mt-2">换个关键词试试看？</p>
               </div>
-            </div>
-          )}
+            )}
+          </>
+        ) : (
+          /* 默认视图：全部分类 */
+          categories.map((category) => (
+            <div key={category.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+              {/* 分类标题栏 */}
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/50 dark:bg-gray-800/50">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{category.icon}</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {category.title}
+                    <span className="ml-2 text-sm font-normal text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                      {category.nav.length}
+                    </span>
+                  </h2>
+                </div>
 
-          {/* 无结果 */}
-          {filteredCategories.length === 0 && filteredWebsites.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 dark:text-gray-500 mb-4">
-                <svg
-                  className="w-16 h-16 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.291-1.1-5.7-2.828-1.409 1.728-3.36 2.828-5.7 2.828a7.962 7.962 0 015.7-5.7c0-.34.034-.674.1-.992H3a1 1 0 00-1 1v9a1 1 0 001 1h18a1 1 0 001-1v-9a1 1 0 00-1-1h-3.1c.066.318.1.652.1.992a7.96 7.96 0 01-5.7 5.7z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                未找到匹配的结果
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                没有找到与 &quot;{searchQuery}&quot; 相关的分类或网站
-              </p>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* 默认分类列表 */
-        <div className="space-y-6">
-          {filteredCategories.map((category) => (
-            <div
-              key={category.id}
-              id={`category-${category.id}`}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
-            >
-              <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <span className="mr-2">{category.icon}</span>
-                  {category.title}
-                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                    ({category.nav.length})
-                  </span>
-                </h2>
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2 w-full sm:w-auto">
                   <button
-                    className="text-blue-500 hover:text-blue-700"
+                    onClick={() => handleAddWebsite(category)}
+                    className="flex-1 sm:flex-none px-3 py-1.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-md text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                  >
+                    + 添加网站
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortingCategory(category);
+                      setIsWebsiteSortModalOpen(true);
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    title="排序"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                  <button
                     onClick={() => handleEditCategory(category)}
+                    className="p-2 text-blue-400 hover:text-blue-600 transition-colors"
+                    title="编辑分类"
                   >
-                    编辑
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
                   </button>
                   <button
-                    className="text-red-500 hover:text-red-700"
                     onClick={() => handleDeleteCategory(category)}
+                    className="p-2 text-red-400 hover:text-red-600 transition-colors"
+                    title="删除分类"
                   >
-                    删除
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
               </div>
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex space-x-2">
-                    <button
-                      className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
-                      onClick={() => handleShowWebsiteSort(category)}
-                    >
-                      网站排序
-                    </button>
-                    <button
-                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm transition-colors"
-                      onClick={() => handleAddWebsite(category)}
-                    >
-                      添加网站
-                    </button>
-                  </div>
-                </div>
 
+              {/* 网站列表 Grid */}
+              <div className="p-6 bg-white dark:bg-gray-800">
                 {category.nav.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    该分类下没有网站
+                  <div className="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                    <p className="text-gray-400 text-sm">暂无网站，点击上方按钮添加</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     {category.nav.map((website) => (
-                      <div
+                      <WebsiteCardAdmin
                         key={website.id}
-                        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 flex flex-col transition-all duration-200 hover:shadow-md min-h-[140px]"
-                      >
-                        <div className="flex items-start">
-                          <>
-                            <OptimizedImage
-                              src={website.icon}
-                              alt={website.name}
-                              width={40}
-                              height={40}
-                              className="rounded-lg object-cover mr-3 flex-shrink-0"
-                              fallbackClassName="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3 flex-shrink-0"
-                            />
-                          </>
-                          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                              {website.name}
-                            </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex-1 line-clamp-2">
-                              {website.desc}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* 操作按钮 */}
-                        <div className="mt-3 flex justify-end space-x-2">
-                          <button
-                            className="text-blue-500 hover:text-blue-700 text-sm"
-                            onClick={() => handleEditWebsite(website)}
-                          >
-                            编辑
-                          </button>
-                          <button
-                            className="text-green-500 hover:text-green-700 text-sm"
-                            onClick={() => handleMoveWebsite(website, category)}
-                          >
-                            移动
-                          </button>
-                          <button
-                            className="text-red-500 hover:text-red-700 text-sm"
-                            onClick={() =>
-                              handleDeleteWebsite(website, category)
-                            }
-                          >
-                            删除
-                          </button>
-                        </div>
-                      </div>
+                        website={website}
+                        onEdit={() => {
+                          setSelectedCategory(category);
+                          setEditingWebsite(website);
+                          setIsEditModalOpen(true);
+                        }}
+                        onDelete={() => handleDeleteWebsite(website, category)}
+                        onMove={() => handleMoveWebsite(website, category)}
+                      />
                     ))}
                   </div>
                 )}
               </div>
             </div>
-          ))}
-        </div>
-      )}
-      {/* 编辑网站模态框 */}
+          ))
+        )}
+      </div>
+
+      {/* Modals */}
       <EditWebsiteModal
         website={editingWebsite}
         isOpen={isEditModalOpen}
@@ -1113,79 +561,56 @@ export default function WebManagementPage() {
         onSave={handleSaveWebsite}
       />
 
-      {/* 删除确认模态框 */}
+      <EditCategoryModal
+        category={editingCategory}
+        isOpen={isEditCategoryModalOpen}
+        onClose={() => setIsEditCategoryModalOpen(false)}
+        onSave={handleSaveCategory}
+      />
+
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setDeletingWebsite(null);
-        }}
+        onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDeleteWebsite}
         itemName={deletingWebsite?.name || ''}
       />
 
-      {/* 移动网站模态框 */}
-      <MoveWebsiteModal
-        categories={categories}
-        website={movingWebsite}
-        isOpen={isMoveModalOpen}
-        onClose={() => {
-          setIsMoveModalOpen(false);
-          setMovingWebsite(undefined);
-        }}
-        onMove={confirmMoveWebsite}
-      />
-
-      {/* 编辑分类模态框 */}
-      <EditCategoryModal
-        category={editingCategory}
-        isOpen={isEditCategoryModalOpen}
-        onClose={() => {
-          setIsEditCategoryModalOpen(false);
-          setEditingCategory(undefined);
-        }}
-        onSave={handleSaveCategory}
-      />
-
-      {/* 删除分类确认模态框 */}
       <DeleteConfirmModal
         isOpen={isDeleteCategoryModalOpen}
-        onClose={() => {
-          setIsDeleteCategoryModalOpen(false);
-          setDeletingCategory(null);
-        }}
+        onClose={() => setIsDeleteCategoryModalOpen(false)}
         onConfirm={confirmDeleteCategory}
         itemName={deletingCategory?.title || ''}
       />
 
-      {/* 分类排序模态框 */}
+      <MoveWebsiteModal
+        categories={categories}
+        website={movingWebsite}
+        isOpen={isMoveModalOpen}
+        onClose={() => setIsMoveModalOpen(false)}
+        onMove={confirmMoveWebsite}
+      />
+
       <CategorySortModal
-        key={`category-sort-${categories.length}`}
         categories={categories}
         isOpen={isCategorySortModalOpen}
         onClose={() => setIsCategorySortModalOpen(false)}
         onSave={handleSaveCategorySort}
       />
 
-      {/* 网站排序模态框 */}
       <WebsiteSortModal
-        key={sortingCategory?.id || 'empty'}
         category={sortingCategory || { id: 0, title: '', icon: '', nav: [] }}
         isOpen={isWebsiteSortModalOpen}
-        onClose={() => {
-          setIsWebsiteSortModalOpen(false);
-          setSortingCategory(null);
-        }}
+        onClose={() => setIsWebsiteSortModalOpen(false)}
         onSave={handleSaveWebsiteSort}
       />
 
-      {/* 数据比较模态框 */}
       <DataCompareModal
         diffResult={diffResult}
         isOpen={isCompareModalOpen}
         onClose={() => setIsCompareModalOpen(false)}
-        onUseRemote={handleUseRemoteConfig}
-        onSyncToRemote={handleSyncToLocalRemote}
+        // 注意：这里需要根据你的 store 实现具体的同步方法
+        // onUseRemote={handleUseRemoteConfig}
+        // onSyncToRemote={handleSyncToLocalRemote}
       />
     </div>
   );
