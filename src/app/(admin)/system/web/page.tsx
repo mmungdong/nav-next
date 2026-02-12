@@ -13,6 +13,7 @@ import MessageDisplay from '@/components/MessageDisplay';
 import DataCompareModal from '@/components/DataCompareModal';
 import { DataDiffResult } from '@/stores/navStore';
 import WebsiteCardAdmin from '@/components/WebsiteCardAdmin'; // 新增组件
+import { updateFileContent, getFileContent } from '@/lib/githubApi';
 
 export default function WebManagementPage() {
   const {
@@ -89,6 +90,109 @@ export default function WebManagementPage() {
   }, [searchQuery, categories]);
 
   // --- CRUD 操作处理 ---
+
+  const handleUseRemoteConfig = async () => {
+    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
+
+    // 设置加载状态
+    setIsSyncing(true);
+    setMessage({ type: 'loading', text: '正在拉取远程配置...' });
+    setIsMessageVisible(true);
+
+    try {
+      // 获取远程数据
+      const remoteData = await fetchRemoteData(githubToken);
+
+      if (!remoteData) {
+        throw new Error('远程数据为空或格式错误');
+      }
+
+      // 保存到本地存储 (覆盖)
+      await saveCategories(remoteData);
+
+      // 更新时间
+      updateSyncTime();
+
+      // 关闭模态框
+      setIsCompareModalOpen(false);
+
+      // 成功提示
+      setMessage({ type: 'success', text: '同步成功！页面即将刷新...' });
+
+      // 延迟刷新页面，确保状态重置
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+
+    } catch (error) {
+      console.error('拉取失败:', error);
+      showMessage('error', `拉取失败: ${(error as Error).message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // 2. 同步本地配置到远程 (Push: Local -> Remote)
+  const handleSyncToLocalRemote = async () => {
+    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
+
+    // 配置信息 (建议后续提取到环境变量或设置页)
+    const owner = 'mmungdong'; // ⚠️ 请确认这是你的 GitHub 用户名
+    const repo = 'nav-next';   // ⚠️ 请确认这是你的 仓库名
+    const path = 'public/data/db.json'; // 数据文件路径
+    const branch = 'main';     // 分支名
+
+    setIsSyncing(true);
+    setMessage({ type: 'loading', text: '正在推送到远程仓库...' });
+    setIsMessageVisible(true);
+
+    try {
+      // 第一步：获取远程文件的 SHA (GitHub API 更新文件必须提供 SHA)
+      const fileInfo = await getFileContent(
+        githubToken,
+        owner,
+        repo,
+        path,
+        branch
+      );
+
+      // 第二步：准备要上传的内容
+      // 格式化 JSON，缩进2个空格，方便阅读
+      const content = JSON.stringify(categories, null, 2);
+      const commitMessage = `Update data via Web Console: ${new Date().toLocaleString()}`;
+
+      // 第三步：执行更新
+      await updateFileContent(
+        githubToken,
+        owner,
+        repo,
+        path,
+        content,
+        commitMessage,
+        branch,
+        fileInfo.sha // 如果是新建文件，这里可能是 undefined，但在同步场景下通常文件已存在
+      );
+
+      // 成功处理
+      updateSyncTime();
+      setIsCompareModalOpen(false);
+      showMessage('success', '推送成功！远程仓库已更新');
+
+    } catch (error) {
+      console.error('推送失败:', error);
+      let errMsg = (error as Error).message;
+      if (errMsg.includes('404')) {
+        errMsg = '找不到仓库或文件，请检查用户名/仓库名配置';
+      } else if (errMsg.includes('409')) {
+        errMsg = '发生冲突，请先拉取远程最新代码';
+      }
+      showMessage('error', `推送失败: ${errMsg}`);
+    } finally {
+      setIsSyncing(false);
+      // 3秒后隐藏 loading 消息（如果 showMessage 没覆盖的话）
+      setTimeout(() => setIsMessageVisible(false), 3000);
+    }
+  };
 
   // 显示消息辅助函数
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -609,8 +713,9 @@ export default function WebManagementPage() {
         isOpen={isCompareModalOpen}
         onClose={() => setIsCompareModalOpen(false)}
         // 注意：这里需要根据你的 store 实现具体的同步方法
-        // onUseRemote={handleUseRemoteConfig}
-        // onSyncToRemote={handleSyncToLocalRemote}
+        onUseRemote={handleUseRemoteConfig}
+        onSyncToRemote={handleSyncToLocalRemote}
+        setMessage={setMessage}
       />
     </div>
   );
