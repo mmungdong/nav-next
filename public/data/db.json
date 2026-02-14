@@ -929,6 +929,16 @@
         "top": false,
         "ownVisible": false,
         "index": null
+      },
+      {
+        "id": 1771069360892,
+        "name": "外汇天眼",
+        "desc": "外汇相关",
+        "url": "https://www.fxeyefx.com/zh-cn/",
+        "icon": "https://www.google.com/s2/favicons?domain=www.fxeyefx.com",
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
       }
     ]
   },
