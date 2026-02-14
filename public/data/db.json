@@ -939,6 +939,16 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
+      },
+      {
+        "id": 1771069421772,
+        "name": "福汇",
+        "desc": "外汇平台",
+        "url": "https://www.fh-zh.com/?cmp=7017V000001wNLMQA2&utm_source=fxeye&utm_medium=display&utm_campaign=text_link",
+        "icon": "https://www.google.com/s2/favicons?domain=www.fh-zh.com",
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
       }
     ]
   },
