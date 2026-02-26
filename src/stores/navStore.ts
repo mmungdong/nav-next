@@ -46,7 +46,7 @@ interface NavState {
   categories: ICategory[];
   settings: ISettings;
   loading: boolean;
-  fetchCategories: () => Promise<void>;
+  fetchCategories: (isAdmin?: boolean) => Promise<void>;
   updateCategories: (categories: ICategory[]) => void;
   saveCategories: (categories: ICategory[]) => Promise<void>;
   getLastSyncTime: () => string | null;
@@ -199,11 +199,31 @@ const fetchRemoteData = async (
 };
 
 // 从本地文件加载数据
-const fetchCategoriesData = async (): Promise<ICategory[]> => {
-  // 首先尝试从本地存储加载
-  const storedCategories = loadFromLocalStorage();
-  if (storedCategories) {
-    return storedCategories;
+const fetchCategoriesData = async (isAdmin = false): Promise<ICategory[]> => {
+  // 管理后台始终使用 localStorage 中的本地修改数据
+  if (isAdmin) {
+    const storedCategories = loadFromLocalStorage();
+    if (storedCategories) {
+      return storedCategories;
+    }
+    // 如果管理后台 localStorage 为空，尝试从文件加载
+    console.warn('管理后台: localStorage 为空，从文件加载数据');
+  } else {
+    // 普通用户访问：检查缓存是否过期（1小时）
+    const lastSyncTime = localStorage.getItem(LAST_SYNC_KEY);
+    const storedCategories = loadFromLocalStorage();
+
+    if (storedCategories && lastSyncTime) {
+      const syncTime = new Date(lastSyncTime).getTime();
+      const currentTime = new Date().getTime();
+      const CACHE_EXPIRE_TIME = 60 * 60 * 1000; // 1小时
+
+      // 如果缓存未过期，使用缓存
+      if (currentTime - syncTime < CACHE_EXPIRE_TIME) {
+        return storedCategories;
+      }
+      console.log('缓存已过期，重新加载数据');
+    }
   }
 
   // 模拟 API 调用延迟
@@ -289,9 +309,9 @@ export const useNavStore = create<NavState>((set) => ({
   categories: [],
   settings: {},
   loading: true,
-  fetchCategories: async () => {
+  fetchCategories: async (isAdmin = false) => {
     try {
-      const categories = await fetchCategoriesData();
+      const categories = await fetchCategoriesData(isAdmin);
       set({ categories, loading: false });
     } catch (error) {
       console.error('Failed to fetch categories:', error);
