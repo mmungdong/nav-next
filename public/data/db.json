@@ -86,6 +86,16 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
+      },
+      {
+        "id": 1773061671803,
+        "name": "Google",
+        "desc": "",
+        "url": "https://www.google.com/?hl=zh-CN",
+        "icon": "https://www.google.com/s2/favicons?domain=www.google.com",
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
       }
     ]
   },
