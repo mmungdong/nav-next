@@ -5,8 +5,12 @@ import { useNavStore } from '@/stores/navStore';
 import { animationConfig } from '@/lib/animations';
 import { ICategory } from '@/types';
 import { useScrollSpy } from '@/hooks/useScrollSpy';
+import { useDebounce } from '@/hooks/useDebounce';
+import { usePreloadImages } from '@/hooks/usePreloadImages';
 import { WebsiteCard } from '@/components/WebsiteCard';
 import { CategoryNav } from '@/components/CategoryNav';
+import { SkeletonLoader } from '@/components/Skeleton';
+import { MobileNav } from '@/components/MobileNav';
 
 // 1. 定义统一的文件夹图标组件 (与侧边栏保持一致)
 const FolderIcon = ({ className }: { className?: string }) => (
@@ -27,14 +31,46 @@ export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 搜索防抖
+  const debouncedSearchQuery = useDebounce(searchQuery, 200);
+
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // 1. 过滤逻辑 Memoization
+  // 收集所有图标 URL 用于预加载
+  const allIconUrls = useMemo(() => {
+    const urls: (string | undefined)[] = [];
+    categories.forEach((category) => {
+      category.nav.forEach((website) => {
+        urls.push(website.icon);
+      });
+    });
+    return urls;
+  }, [categories]);
+
+  // 预加载网站图标
+  usePreloadImages(allIconUrls, { enabled: !loading, maxConcurrent: 5 });
+
+  // 键盘快捷键：⌘K 聚焦搜索框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('main-search-input');
+        searchInput?.focus();
+        searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // 过滤逻辑 Memoization
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedSearchQuery.trim()) return categories;
+    const query = debouncedSearchQuery.toLowerCase();
     return categories
       .map((category) => {
         const categoryMatch = category.title.toLowerCase().includes(query);
@@ -52,7 +88,7 @@ export default function Home() {
         return null;
       })
       .filter((cat): cat is ICategory => cat !== null);
-  }, [categories, searchQuery]);
+  }, [categories, debouncedSearchQuery]);
 
   // 2. ScrollSpy ID 提取
   const categoryIds = useMemo(
@@ -63,16 +99,13 @@ export default function Home() {
   // 3. 滚动监听 Hook
   const { activeId, scrollToSection } = useScrollSpy(categoryIds);
 
+  // 骨架屏加载状态
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[60vh] w-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 lg:pb-8">
 
       {/* 顶部 Hero 搜索区 */}
       <div className="relative mb-12 max-w-3xl mx-auto text-center pt-8">
@@ -85,6 +118,7 @@ export default function Home() {
             </svg>
           </div>
           <input
+            id="main-search-input"
             type="text"
             className="block w-full pl-12 pr-4 py-4
               bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl
@@ -182,6 +216,15 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* 移动端底部导航 */}
+      {filteredCategories.length > 0 && (
+        <MobileNav
+          categories={filteredCategories}
+          activeId={activeId}
+          onSelect={scrollToSection}
+        />
+      )}
     </div>
   );
 }

@@ -702,6 +702,7 @@ export default function WebManagementPage() {
       />
 
       <WebsiteSortModal
+        key={sortingCategory?.id || 'new'}
         category={sortingCategory || { id: 0, title: '', icon: '', nav: [] }}
         isOpen={isWebsiteSortModalOpen}
         onClose={() => setIsWebsiteSortModalOpen(false)}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ICategory } from '@/types';
 
 interface EditCategoryModalProps {
@@ -16,12 +16,25 @@ export default function EditCategoryModal({
   onClose,
   onSave,
 }: EditCategoryModalProps) {
-  const [formData, setFormData] = useState<ICategory>(() => ({
-    id: category?.id || Date.now(),
-    title: category?.title || '',
-    icon: category?.icon || '',
-    nav: category?.nav || [],
-  }));
+  // 初始状态为空，由 useEffect 在弹窗打开时设置
+  const [formData, setFormData] = useState<ICategory>({
+    id: 0,
+    title: '',
+    icon: '',
+    nav: [],
+  });
+
+  // 当弹窗打开或 category 属性变化时，重置表单
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        id: category?.id || Date.now(),
+        title: category?.title || '',
+        icon: category?.icon || '',
+        nav: category?.nav || [],
+      });
+    }
+  }, [isOpen, category]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>

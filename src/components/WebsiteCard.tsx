@@ -20,8 +20,8 @@ export const WebsiteCard = ({ website, index }: WebsiteCardProps) => {
       viewport={{ once: true, margin: "0px 0px -50px 0px" }}
       transition={{
         duration: animationConfig.card.enter.duration / 1000,
-        ease: animationConfig.easings.easeInOut,
-        delay: (index % 10) * 0.05,
+        ease: animationConfig.easings.easeOut,
+        delay: Math.min(index * 0.02, 0.3), // 限制最大延迟，优化大量数据时的体验
       }}
     >
       <div className="

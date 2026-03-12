@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
+import { scrollToTop } from '@/lib/animations';
 
 interface FloatingControlsProps {
   onOpenSearch: () => void;
@@ -29,7 +30,7 @@ export default function FloatingControls({ onOpenSearch }: FloatingControlsProps
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={() => window.scrollTo(scrollToTop)}
             className={btnClass}
             title="回到顶部"
           >

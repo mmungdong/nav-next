@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { ICategory } from '@/types';
 
 interface CategoryNavProps {

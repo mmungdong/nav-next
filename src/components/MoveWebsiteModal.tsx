@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ICategory, IWebsite } from '@/types';
 
 interface MoveWebsiteModalProps {
@@ -21,9 +21,11 @@ export default function MoveWebsiteModal({
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   // 当模态框关闭时重置选择
-  if (!isOpen && selectedCategory !== null) {
-    setSelectedCategory(null);
-  }
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedCategory(null);
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
