@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { ICategory } from '@/types';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { scrollToTop } from '@/lib/animations';
 
 const DEFAULT_CATEGORY_ICON = '📂';
@@ -15,8 +15,7 @@ interface MobileNavProps {
 }
 
 export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) => {
-  const [isVisible, setIsVisible] = useState(true);
-  const lastScrollYRef = useRef(0);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // 使用 useMemo 缓存当前激活的分类
   const activeCategory = useMemo(
@@ -24,45 +23,13 @@ export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) =>
     [categories, activeId]
   );
 
-  // 滚动时隐藏底部导航 - 使用 requestAnimationFrame 节流
-  useEffect(() => {
-    let rafId: number;
-
-    const handleScroll = () => {
-      // 使用 rafId 在下一帧更新状态，避免频繁触发
-      if (rafId) cancelAnimationFrame(rafId);
-
-      rafId = requestAnimationFrame(() => {
-        const currentScrollY = window.scrollY;
-
-        // 向下滚动隐藏，向上滚动显示
-        if (currentScrollY > lastScrollYRef.current && currentScrollY > 100) {
-          setIsVisible(false);
-        } else {
-          setIsVisible(true);
-        }
-
-        lastScrollYRef.current = currentScrollY;
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  // 切换展开/收起
-  const [isExpanded, setIsExpanded] = useState(false);
-
   return (
     <>
-      {/* 底部导航栏 */}
+      {/* 底部导航栏 - 常驻显示 */}
       <motion.nav
         className="fixed bottom-0 left-0 right-0 z-30 lg:hidden"
         initial={{ y: 100 }}
-        animate={{ y: isVisible ? 0 : 100 }}
+        animate={{ y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
         {/* 毛玻璃背景 */}
@@ -76,7 +43,7 @@ export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) =>
               <span className="text-lg mr-2">
                 {activeCategory?.icon || DEFAULT_CATEGORY_ICON}
               </span>
-              <span className="text-sm font-medium truncate max-w-[100px]">
+              <span className="text-sm font-medium truncate max-w-[80px]">
                 {activeCategory?.title || DEFAULT_TITLE}
               </span>
               <svg
@@ -103,7 +70,6 @@ export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) =>
             {/* 搜索按钮 */}
             <button
               onClick={() => {
-                // 触发页面内的搜索框聚焦
                 const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
                 searchInput?.focus();
                 searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -23,7 +23,7 @@ export default function FloatingControls({ onOpenSearch }: FloatingControlsProps
   const btnClass = "bg-white/90 dark:bg-gray-800/90 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-110 transition-all duration-200 cursor-pointer group z-50";
 
   return (
-    <div className="fixed bottom-8 right-8 flex flex-col gap-4 z-50 pointer-events-auto">
+    <div className="fixed bottom-8 right-8 hidden lg:flex flex-col gap-4 z-50 pointer-events-auto">
       <AnimatePresence>
         {showTopBtn && (
           <motion.button
