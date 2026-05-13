@@ -96,16 +96,6 @@
         "rate": 5,
         "top": false,
         "ownVisible": false
-      },
-      {
-        "id": 1778304909475,
-        "name": "AI HOT",
-        "desc": "",
-        "url": "https://aihot.virxact.com/daily",
-        "icon": "https://www.google.com/s2/favicons?domain=aihot.virxact.com",
-        "rate": 5,
-        "top": false,
-        "ownVisible": false
       }
     ]
   },
@@ -976,6 +966,16 @@
         "desc": "mt4 & mt5",
         "url": "https://www.metatrader4.com/zh/download",
         "icon": "https://www.google.com/s2/favicons?domain=www.metatrader4.com",
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
+      },
+      {
+        "id": 1778684473383,
+        "name": "exness",
+        "desc": "",
+        "url": "https://my.exness.com/pa/exness-benefits/vps?origin=benefits",
+        "icon": "https://www.google.com/s2/favicons?domain=my.exness.com",
         "rate": 5,
         "top": false,
         "ownVisible": false
