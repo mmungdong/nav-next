@@ -1,7 +1,15 @@
-import { getOwnerFromRepoUrl } from './utils';
+import { owner, repo } from './config';
 
 // GitHub API 基础URL
 const GITHUB_API_BASE = 'https://api.github.com';
+
+// decode base64 content from GitHub API (UTF-8 safe)
+export function decodeContent(base64: string): string {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
 
 // 验证 GitHub Token 的有效性
 interface GitHubUser {
@@ -40,15 +48,13 @@ interface GitHubUser {
 }
 
 export async function verifyGithubToken(
-  token: string,
-  repoUrl: string
+  token: string
 ): Promise<{
   valid: boolean;
   user?: GitHubUser;
   message?: string;
 }> {
   try {
-    // 首先验证 token 本身的有效性
     const userResponse = await fetch(`${GITHUB_API_BASE}/user`, {
       headers: {
         Authorization: `token ${token}`,
@@ -58,35 +64,20 @@ export async function verifyGithubToken(
 
     if (!userResponse.ok) {
       if (userResponse.status === 401) {
-        return {
-          valid: false,
-          message: 'Token 无效或已过期',
-        };
+        return { valid: false, message: 'Token 无效或已过期' };
       } else if (userResponse.status === 403) {
-        return {
-          valid: false,
-          message: 'Token 权限不足',
-        };
+        return { valid: false, message: 'Token 权限不足' };
       } else {
-        return {
-          valid: false,
-          message: `验证失败 (${userResponse.status})`,
-        };
+        return { valid: false, message: `验证失败 (${userResponse.status})` };
       }
     }
 
     const userData = await userResponse.json();
 
-    // 获取仓库所有者信息
-    const owner = getOwnerFromRepoUrl(repoUrl);
-
-    // 验证用户是否为仓库所有者
     if (userData.login !== owner) {
-      // 对于私有仓库，用户可能是协作者而不是所有者
-      // 我们需要检查用户是否有访问该仓库的权限
       try {
         const repoResponse = await fetch(
-          `${GITHUB_API_BASE}/repos/${owner}/nav-next`,
+          `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
           {
             headers: {
               Authorization: `token ${token}`,
@@ -97,42 +88,23 @@ export async function verifyGithubToken(
 
         if (!repoResponse.ok) {
           if (repoResponse.status === 404) {
-            return {
-              valid: false,
-              message: '无法访问指定的私有仓库，请确认仓库名称和您的访问权限',
-            };
+            return { valid: false, message: '无法访问指定的私有仓库，请确认仓库名称和您的访问权限' };
           } else if (repoResponse.status === 403) {
-            return {
-              valid: false,
-              message:
-                'Token权限不足，无法访问私有仓库。请确保Token具有完整的repo权限',
-            };
+            return { valid: false, message: 'Token权限不足，无法访问私有仓库。请确保Token具有完整的repo权限' };
           } else {
-            return {
-              valid: false,
-              message: `仓库访问失败 (${repoResponse.status})`,
-            };
+            return { valid: false, message: `仓库访问失败 (${repoResponse.status})` };
           }
         }
       } catch (repoError) {
         console.error('仓库访问检查失败:', repoError);
-        return {
-          valid: false,
-          message: '无法验证对私有仓库的访问权限',
-        };
+        return { valid: false, message: '无法验证对私有仓库的访问权限' };
       }
     }
 
-    return {
-      valid: true,
-      user: userData,
-    };
+    return { valid: true, user: userData };
   } catch (error) {
     console.error('GitHub Token 验证错误:', error);
-    return {
-      valid: false,
-      message: '网络错误，请稍后再试',
-    };
+    return { valid: false, message: '网络错误，请稍后再试' };
   }
 }
 
@@ -163,7 +135,7 @@ export async function getFileContent(
   owner: string,
   repo: string,
   path: string,
-  branch: string = 'main'
+  branch: string
 ) {
   try {
     const response = await fetch(
@@ -243,7 +215,7 @@ export async function updateFileContent(
   path: string,
   content: string,
   message: string,
-  branch: string = 'main',
+  branch: string,
   sha?: string
 ) {
   try {

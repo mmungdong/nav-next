@@ -1,13 +1,35 @@
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+export interface ISiteSettings {
+  name: string;
+  description: string;
+  theme: ThemeMode;
+}
+
+export interface ISearchEngine {
+  id: string;
+  name: string;
+  url: string; // search URL template, query appended directly
+  icon: string;
+}
+
+export interface ISiteConfig {
+  site: ISiteSettings;
+  search: { engines: ISearchEngine[] };
+}
+
 export interface IWebsite {
   id: number;
   name: string;
   desc: string;
   url: string;
-  icon?: string; // 使图标可选，因为不是所有网站都有图标
+  icon?: string;
+  tags?: string[];
   rate?: number; // 0-5
   top?: boolean;
   ownVisible?: boolean;
   topTypes?: number[];
+  index?: number;
 }
 
 export interface ICategory {
@@ -17,11 +39,6 @@ export interface ICategory {
   nav: IWebsite[];
 }
 
-export interface ISettings {
-  [key: string]: string | number | boolean | object | null | undefined;
-}
-
-// 添加更具体的类型定义
 export interface IUserData {
   name: string;
   email: string;
@@ -57,22 +74,4 @@ export interface IWebsiteRating {
 export interface IPermission {
   resource: string;
   actions: string[];
-}
-
-// 网站配置类型
-export interface IWebsiteConfig {
-  showRatings: boolean;
-  showTags: boolean;
-  defaultIcon: string;
-  enableSearch: boolean;
-}
-
-// 搜索配置类型
-export interface ISearchConfig {
-  id: number;
-  name: string;
-  url: string;
-  icon: string;
-  sort: number;
-  isActive: boolean;
 }

@@ -1,19 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search as SearchIcon } from 'lucide-react';
 import SiteSearchResults from './SiteSearchResults';
 import OptimizedImage from '@/components/OptimizedImage';
 import { animationConfig } from '@/lib/animations';
-
-interface SearchEngine {
-  id: string;
-  name: string;
-  icon: string;
-  url: string;
-  isInternal?: boolean;
-}
+import { useConfigStore } from '@/stores/configStore';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -22,39 +15,18 @@ interface SearchModalProps {
 
 const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEngine, setSelectedEngine] = useState('google');
+  const [selectedEngine, setSelectedEngine] = useState('internal');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // 搜索引擎配置
-  const searchEngines: SearchEngine[] = [
-    {
-      id: 'internal',
-      name: '站内',
-      icon: '',
-      url: '',
-      isInternal: true,
-    },
-    {
-      id: 'google',
-      name: 'Google',
-      icon: 'https://www.google.com/favicon.ico',
-      url: 'https://www.google.com/search?q=',
-    },
-    {
-      id: 'bing',
-      name: 'Bing',
-      icon: 'https://www.bing.com/favicon.ico',
-      url: 'https://www.bing.com/search?q=',
-    },
-    {
-      id: 'baidu',
-      name: '百度',
-      icon: 'https://www.baidu.com/favicon.ico',
-      url: 'https://www.baidu.com/s?wd=',
-    },
-  ];
+  const { siteConfig } = useConfigStore();
+  const searchEngines = useMemo(() => {
+    return [
+      { id: 'internal', name: '站内', icon: '', url: '', isInternal: true },
+      ...siteConfig.search.engines.map((e) => ({ id: e.id, name: e.name, icon: e.icon, url: e.url, isInternal: false })),
+    ];
+  }, [siteConfig.search.engines]);
 
   // 处理搜索
   const handleSearch = (engineId: string) => {
@@ -244,7 +216,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                         <SearchIcon className="w-5 h-5 mr-3 text-blue-500" />
                       ) : (
                         <OptimizedImage
-                          src={engine.icon}
+                          src={`https://www.google.com/s2/favicons?domain=${new URL(engine.url).hostname}&sz=64`}
                           alt={engine.name}
                           width={20}
                           height={20}

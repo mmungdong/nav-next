@@ -1,5 +1,10 @@
 {
   "version": "1.0.0",
-  "gitRepoUrl": "https://github.com/mmungdong/nav-next",
-  "branch": "main"
+  "github": {
+    "owner": "mmungdong",
+    "repo": "nav-next",
+    "branch": "main",
+    "dbPath": "public/data/db.json",
+    "configPath": "public/data/site-config.json"
+  }
 }

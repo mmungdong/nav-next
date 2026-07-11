@@ -7,20 +7,17 @@ import { animationConfig } from '@/lib/animations';
 
 interface AdminSidebarProps {
   onLogout?: () => void;
+  onBackHome?: () => void;
 }
 
 const menuItems = [
   { name: '网站管理', href: '/system/web' },
   { name: '搜索管理', href: '/system/search' },
   { name: '系统设置', href: '/system/setting' },
-  { name: '组件管理', href: '/system/component' },
-  { name: '收录管理', href: '/system/collect' },
-  { name: '书签管理', href: '/system/bookmark' },
   { name: '系统信息', href: '/system/info' },
-  { name: '配置管理', href: '/system/config' },
 ];
 
-export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ onLogout, onBackHome }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loadingHref, setLoadingHref] = useState<string | null>(null);
@@ -133,7 +130,7 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex flex-col space-y-2">
             <motion.button
-              onClick={() => router.push('/')}
+              onClick={() => onBackHome?.()}
               className="flex items-center justify-center px-4 py-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 touch-manipulation"
               whileHover={{
                 scale: animationConfig.sidebar.menuItem.hover.scale,

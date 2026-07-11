@@ -302,10 +302,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   validateGithubToken: async (token: string) => {
     try {
-      // 默认仓库URL
-      const repoUrl = 'https://github.com/mmungdong/nav-next';
-
-      const result = await verifyGithubToken(token, repoUrl);
+      const result = await verifyGithubToken(token);
 
       if (result.valid && result.user) {
         // 保存GitHub Token和用户信息到localStorage
