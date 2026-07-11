@@ -75,13 +75,3 @@ export interface IPermission {
   resource: string;
   actions: string[];
 }
-
-// 保留：仍被 search 管理页引用，Task 9 清除引用后删除
-export interface ISearchConfig {
-  id: number;
-  name: string;
-  url: string;
-  icon: string;
-  sort: number;
-  isActive: boolean;
-}
