@@ -2,7 +2,7 @@
   "site": {
     "name": "Nav Next",
     "description": "个人导航站",
-    "theme": "light"
+    "theme": "dark"
   },
   "search": {
     "engines": [
