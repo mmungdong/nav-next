@@ -41,7 +41,7 @@ export default function SearchManagementPage() {
       writeEngines(engines.map((e) => (e.id === editing.id ? data : e)));
       flash('success', '引擎已更新');
     } else {
-      writeEngines([...engines, data]);
+      writeEngines([...engines, { ...data, id: `engine-${Date.now()}` }]);
       flash('success', '引擎已添加');
     }
     setShowModal(false);
@@ -167,7 +167,7 @@ function EngineModal({
   onClose: () => void;
 }) {
   const [form, setForm] = useState<ISearchEngine>(
-    engine || { id: `engine-${Date.now()}`, name: '', url: '', icon: '' }
+    engine || { id: '', name: '', url: '', icon: '' }
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
