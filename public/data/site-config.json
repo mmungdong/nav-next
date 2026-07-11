@@ -23,12 +23,6 @@
         "name": "百度",
         "url": "https://www.baidu.com/s?wd=",
         "icon": "baidu"
-      },
-      {
-        "id": "engine-1783775321811",
-        "name": "测试 ",
-        "url": "https://test.com",
-        "icon": "111"
       }
     ]
   }
