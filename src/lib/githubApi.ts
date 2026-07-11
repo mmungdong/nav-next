@@ -215,7 +215,7 @@ export async function updateFileContent(
   path: string,
   content: string,
   message: string,
-  branch: string = 'main',
+  branch: string,
   sha?: string
 ) {
   try {
