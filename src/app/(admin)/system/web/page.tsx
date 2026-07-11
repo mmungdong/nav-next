@@ -14,6 +14,7 @@ import DataCompareModal from '@/components/DataCompareModal';
 import { DataDiffResult } from '@/stores/navStore';
 import WebsiteCardAdmin from '@/components/WebsiteCardAdmin'; // 新增组件
 import { updateFileContent, getFileContent } from '@/lib/githubApi';
+import { owner, repo, branch, dbPath } from '@/lib/config';
 
 export default function WebManagementPage() {
   const {
@@ -22,8 +23,7 @@ export default function WebManagementPage() {
     fetchCategories,
     saveCategories,
     getLastSyncTime,
-    checkDataSync,
-    fetchRemoteData,
+    forcePull,
     compareData,
   } = useNavStore();
 
@@ -100,15 +100,12 @@ export default function WebManagementPage() {
     setIsMessageVisible(true);
 
     try {
-      // 获取远程数据
-      const remoteData = await fetchRemoteData(githubToken);
+      // Fetch remote and overwrite local
+      const success = await forcePull(githubToken);
 
-      if (!remoteData) {
+      if (!success) {
         throw new Error('远程数据为空或格式错误');
       }
-
-      // 保存到本地存储 (覆盖)
-      await saveCategories(remoteData);
 
       // 更新时间
       updateSyncTime();
@@ -375,14 +372,18 @@ export default function WebManagementPage() {
     setIsMessageVisible(true);
 
     try {
-      const remoteData = await fetchRemoteData(githubToken);
-      if (remoteData) {
-        const diff = compareData(categories, remoteData);
-        setDiffResult(diff);
-        setIsCompareModalOpen(true);
-      } else {
+      const fileInfo = await getFileContent(githubToken, owner, repo, dbPath, branch);
+      if (!fileInfo.content) {
         showMessage('error', '无法获取远程数据');
+        return;
       }
+      const binaryString = atob(fileInfo.content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+      const remoteData = JSON.parse(new TextDecoder('utf-8').decode(bytes)) as ICategory[];
+      const diff = compareData(categories, remoteData);
+      setDiffResult(diff);
+      setIsCompareModalOpen(true);
     } catch (error) {
       showMessage('error', '比较失败: ' + (error as Error).message);
     } finally {

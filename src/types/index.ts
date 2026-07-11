@@ -76,11 +76,6 @@ export interface IPermission {
   actions: string[];
 }
 
-// 保留：仍被 navStore 引用，Task 2 清除引用后删除
-export interface ISettings {
-  [key: string]: string | number | boolean | object | null | undefined;
-}
-
 // 保留：仍被 search 管理页引用，Task 9 清除引用后删除
 export interface ISearchConfig {
   id: number;
