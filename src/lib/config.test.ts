@@ -11,3 +11,9 @@ test('config exports github config fields', () => {
   assert.ok(owner.length > 0);
   assert.ok(repo.length > 0);
 });
+
+import { appVersion } from './config.ts';
+
+test('appVersion is exported', () => {
+  assert.ok(typeof appVersion === 'string' && appVersion.length > 0);
+});

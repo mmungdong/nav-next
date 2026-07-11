@@ -10,3 +10,5 @@ export interface GithubConfig {
 
 export const githubConfig: GithubConfig = navConfig.github;
 export const { owner, repo, branch, dbPath, configPath } = githubConfig;
+
+export const appVersion: string = navConfig.version;
