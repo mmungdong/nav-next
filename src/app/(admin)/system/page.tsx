@@ -10,45 +10,21 @@ export default function SystemPage() {
     },
     {
       name: '搜索管理',
-      description: '配置搜索功能',
+      description: '配置搜索引擎',
       href: '/system/search',
       color: 'from-purple-500 to-violet-600',
     },
     {
       name: '系统设置',
-      description: '配置系统参数',
+      description: '配置站点名称、描述与主题',
       href: '/system/setting',
       color: 'from-yellow-500 to-amber-600',
     },
     {
-      name: '组件管理',
-      description: '管理系统组件',
-      href: '/system/component',
-      color: 'from-red-500 to-rose-600',
-    },
-    {
-      name: '收录管理',
-      description: '管理网站收录',
-      href: '/system/collect',
-      color: 'from-indigo-500 to-blue-600',
-    },
-    {
-      name: '书签管理',
-      description: '管理书签数据',
-      href: '/system/bookmark',
-      color: 'from-pink-500 to-rose-600',
-    },
-    {
       name: '系统信息',
-      description: '查看系统信息',
+      description: '查看系统信息与同步状态',
       href: '/system/info',
       color: 'from-cyan-500 to-teal-600',
-    },
-    {
-      name: '配置管理',
-      description: '管理系统配置',
-      href: '/system/config',
-      color: 'from-orange-500 to-amber-600',
     },
   ];
 

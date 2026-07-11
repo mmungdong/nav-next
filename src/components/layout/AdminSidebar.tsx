@@ -13,11 +13,7 @@ const menuItems = [
   { name: '网站管理', href: '/system/web' },
   { name: '搜索管理', href: '/system/search' },
   { name: '系统设置', href: '/system/setting' },
-  { name: '组件管理', href: '/system/component' },
-  { name: '收录管理', href: '/system/collect' },
-  { name: '书签管理', href: '/system/bookmark' },
   { name: '系统信息', href: '/system/info' },
-  { name: '配置管理', href: '/system/config' },
 ];
 
 export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
