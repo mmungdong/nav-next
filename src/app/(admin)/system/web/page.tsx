@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { ICategory, IWebsite } from '@/types';
 import EditWebsiteModal from '@/components/EditWebsiteModal';
@@ -10,11 +10,7 @@ import CategorySortModal from '@/components/CategorySortModal';
 import WebsiteSortModal from '@/components/WebsiteSortModal';
 import { useAuthStore } from '@/stores/authStore';
 import MessageDisplay from '@/components/MessageDisplay';
-import DataCompareModal from '@/components/DataCompareModal';
-import { DataDiffResult } from '@/stores/navStore';
-import WebsiteCardAdmin from '@/components/WebsiteCardAdmin'; // 新增组件
-import { updateFileContent, getFileContent } from '@/lib/githubApi';
-import { owner, repo, branch, dbPath } from '@/lib/config';
+import WebsiteCardAdmin from '@/components/WebsiteCardAdmin';
 
 export default function WebManagementPage() {
   const {
@@ -23,8 +19,8 @@ export default function WebManagementPage() {
     fetchCategories,
     saveCategories,
     getLastSyncTime,
-    forcePull,
-    compareData,
+    pushToRemote,
+    dirty,
   } = useNavStore();
 
   const { githubToken } = useAuthStore();
@@ -50,9 +46,7 @@ export default function WebManagementPage() {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'loading'; text: string } | null>(null);
   const [isMessageVisible, setIsMessageVisible] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
-  const [diffResult, setDiffResult] = useState<DataDiffResult | null>(null);
+  const [savingRemote, setSavingRemote] = useState(false);
 
   // 排序状态
   const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
@@ -91,106 +85,6 @@ export default function WebManagementPage() {
 
   // --- CRUD 操作处理 ---
 
-  const handleUseRemoteConfig = async () => {
-    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
-
-    // 设置加载状态
-    setIsSyncing(true);
-    setMessage({ type: 'loading', text: '正在拉取远程配置...' });
-    setIsMessageVisible(true);
-
-    try {
-      // Fetch remote and overwrite local
-      const success = await forcePull(githubToken);
-
-      if (!success) {
-        throw new Error('远程数据为空或格式错误');
-      }
-
-      // 更新时间
-      updateSyncTime();
-
-      // 关闭模态框
-      setIsCompareModalOpen(false);
-
-      // 成功提示
-      setMessage({ type: 'success', text: '同步成功！页面即将刷新...' });
-
-      // 延迟刷新页面，确保状态重置
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-
-    } catch (error) {
-      console.error('拉取失败:', error);
-      showMessage('error', `拉取失败: ${(error as Error).message}`);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // 2. 同步本地配置到远程 (Push: Local -> Remote)
-  const handleSyncToLocalRemote = async () => {
-    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
-
-    // 配置信息 (建议后续提取到环境变量或设置页)
-    const owner = 'mmungdong'; // ⚠️ 请确认这是你的 GitHub 用户名
-    const repo = 'nav-next';   // ⚠️ 请确认这是你的 仓库名
-    const path = 'public/data/db.json'; // 数据文件路径
-    const branch = 'main';     // 分支名
-
-    setIsSyncing(true);
-    setMessage({ type: 'loading', text: '正在推送到远程仓库...' });
-    setIsMessageVisible(true);
-
-    try {
-      // 第一步：获取远程文件的 SHA (GitHub API 更新文件必须提供 SHA)
-      const fileInfo = await getFileContent(
-        githubToken,
-        owner,
-        repo,
-        path,
-        branch
-      );
-
-      // 第二步：准备要上传的内容
-      // 格式化 JSON，缩进2个空格，方便阅读
-      const content = JSON.stringify(categories, null, 2);
-      const commitMessage = `Update data via Web Console: ${new Date().toLocaleString()}`;
-
-      // 第三步：执行更新
-      await updateFileContent(
-        githubToken,
-        owner,
-        repo,
-        path,
-        content,
-        commitMessage,
-        branch,
-        fileInfo.sha // 如果是新建文件，这里可能是 undefined，但在同步场景下通常文件已存在
-      );
-
-      // 成功处理
-      updateSyncTime();
-      setIsCompareModalOpen(false);
-      showMessage('success', '推送成功！远程仓库已更新');
-
-    } catch (error) {
-      console.error('推送失败:', error);
-      let errMsg = (error as Error).message;
-      if (errMsg.includes('404')) {
-        errMsg = '找不到仓库或文件，请检查用户名/仓库名配置';
-      } else if (errMsg.includes('409')) {
-        errMsg = '发生冲突，请先拉取远程最新代码';
-      }
-      showMessage('error', `推送失败: ${errMsg}`);
-    } finally {
-      setIsSyncing(false);
-      // 3秒后隐藏 loading 消息（如果 showMessage 没覆盖的话）
-      setTimeout(() => setIsMessageVisible(false), 3000);
-    }
-  };
-
   // 显示消息辅助函数
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -201,10 +95,12 @@ export default function WebManagementPage() {
     }, 3000);
   };
 
-  // 更新最后同步时间
-  const updateSyncTime = () => {
-    const currentTime = new Date().toISOString();
-    setLastSyncTime(currentTime);
+  const handlePushToRemote = async () => {
+    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
+    setSavingRemote(true);
+    const ok = await pushToRemote(githubToken);
+    setSavingRemote(false);
+    showMessage(ok ? 'success' : 'error', ok ? '推送成功，远程仓库已更新' : '推送失败，请重试');
   };
 
   // 保存网站
@@ -225,7 +121,6 @@ export default function WebManagementPage() {
       });
 
       await saveCategories(updatedCategories);
-      updateSyncTime();
       setIsEditModalOpen(false);
       setEditingWebsite(undefined);
       showMessage('success', '网站保存成功');
@@ -252,7 +147,6 @@ export default function WebManagementPage() {
         return category;
       });
       await saveCategories(updatedCategories);
-      updateSyncTime();
       setIsDeleteModalOpen(false);
       setDeletingWebsite(null);
       showMessage('success', '网站已删除');
@@ -288,7 +182,6 @@ export default function WebManagementPage() {
       });
 
       await saveCategories(updatedCategories);
-      updateSyncTime();
       setIsMoveModalOpen(false);
       setMovingWebsite(undefined);
       showMessage('success', '移动成功');
@@ -319,7 +212,6 @@ export default function WebManagementPage() {
         updatedCategories = [...categories, { ...category, nav: [] }];
       }
       await saveCategories(updatedCategories);
-      updateSyncTime();
       setIsEditCategoryModalOpen(false);
       setEditingCategory(undefined);
       showMessage('success', '分类保存成功');
@@ -338,7 +230,6 @@ export default function WebManagementPage() {
     try {
       const updatedCategories = categories.filter((cat) => cat.id !== deletingCategory.id);
       await saveCategories(updatedCategories);
-      updateSyncTime();
       setIsDeleteCategoryModalOpen(false);
       setDeletingCategory(null);
       showMessage('success', '分类已删除');
@@ -350,7 +241,6 @@ export default function WebManagementPage() {
   // 排序相关
   const handleSaveCategorySort = async (sortedCategories: ICategory[]) => {
     await saveCategories(sortedCategories);
-    updateSyncTime();
     setIsCategorySortModalOpen(false);
     showMessage('success', '分类排序已保存');
   };
@@ -360,35 +250,8 @@ export default function WebManagementPage() {
       cat.id === categoryId ? { ...cat, nav: sortedWebsites } : cat
     );
     await saveCategories(updatedCategories);
-    updateSyncTime();
     setIsWebsiteSortModalOpen(false);
     showMessage('success', '网站排序已保存');
-  };
-
-  // 数据同步相关
-  const handleCompareData = async () => {
-    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
-    setMessage({ type: 'loading', text: '正在获取远程数据...' });
-    setIsMessageVisible(true);
-
-    try {
-      const fileInfo = await getFileContent(githubToken, owner, repo, dbPath, branch);
-      if (!fileInfo.content) {
-        showMessage('error', '无法获取远程数据');
-        return;
-      }
-      const binaryString = atob(fileInfo.content);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-      const remoteData = JSON.parse(new TextDecoder('utf-8').decode(bytes)) as ICategory[];
-      const diff = compareData(categories, remoteData);
-      setDiffResult(diff);
-      setIsCompareModalOpen(true);
-    } catch (error) {
-      showMessage('error', '比较失败: ' + (error as Error).message);
-    } finally {
-      if (message?.type === 'loading') setIsMessageVisible(false);
-    }
   };
 
   // 初始化
@@ -438,14 +301,11 @@ export default function WebManagementPage() {
           <div className="flex flex-wrap gap-3">
             {githubToken && (
               <button
-                className="flex items-center px-4 py-2 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/20 transition-all font-medium"
-                onClick={handleCompareData}
-                disabled={isSyncing}
+                className="flex items-center px-4 py-2 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-all font-medium"
+                onClick={handlePushToRemote}
+                disabled={!dirty || savingRemote}
               >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                数据同步
+                {savingRemote ? '推送中…' : dirty ? '● 保存并推送' : '○ 已同步'}
               </button>
             )}
             <button
@@ -708,16 +568,6 @@ export default function WebManagementPage() {
         isOpen={isWebsiteSortModalOpen}
         onClose={() => setIsWebsiteSortModalOpen(false)}
         onSave={handleSaveWebsiteSort}
-      />
-
-      <DataCompareModal
-        diffResult={diffResult}
-        isOpen={isCompareModalOpen}
-        onClose={() => setIsCompareModalOpen(false)}
-        // 注意：这里需要根据你的 store 实现具体的同步方法
-        onUseRemote={handleUseRemoteConfig}
-        onSyncToRemote={handleSyncToLocalRemote}
-        setMessage={setMessage}
       />
     </div>
   );
