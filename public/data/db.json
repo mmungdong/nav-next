@@ -653,6 +653,16 @@
         "desc": "抠图工具 - 免费抠图网站",
         "url": "https://www.koukoutu.com/removebgtool/all",
         "icon": "https://www.google.com/s2/favicons?domain=www.koukoutu.com"
+      },
+      {
+        "id": 1783750123046,
+        "name": "在线工具箱",
+        "desc": "",
+        "url": "https://codexapp.cc/",
+        "icon": "https://www.google.com/s2/favicons?domain=codexapp.cc",
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
       }
     ]
   },
@@ -966,16 +976,6 @@
         "desc": "mt4 & mt5",
         "url": "https://www.metatrader4.com/zh/download",
         "icon": "https://www.google.com/s2/favicons?domain=www.metatrader4.com",
-        "rate": 5,
-        "top": false,
-        "ownVisible": false
-      },
-      {
-        "id": 1778684473383,
-        "name": "exness",
-        "desc": "",
-        "url": "https://my.exness.com/pa/exness-benefits/vps?origin=benefits",
-        "icon": "https://www.google.com/s2/favicons?domain=my.exness.com",
         "rate": 5,
         "top": false,
         "ownVisible": false
