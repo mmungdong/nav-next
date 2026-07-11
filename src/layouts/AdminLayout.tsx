@@ -105,6 +105,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               保存将推送到远程仓库；丢弃将放弃本地改动。
             </p>
+            {pendingLeave.error && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+                {pendingLeave.error}
+              </p>
+            )}
             <div className="flex justify-end space-x-3">
               <button
                 onClick={pendingLeave.onCancel}

@@ -9,6 +9,7 @@ type Status = 'loading' | 'ready' | 'error';
 
 interface PendingLeave {
   message: string;
+  error: string | null;
   onSave: () => void;
   onDiscard: () => void;
   onCancel: () => void;
@@ -80,7 +81,9 @@ export function useAdminSyncGuard() {
       }
       setPendingLeave({
         message: '有未保存的改动，是否保存？',
+        error: null,
         onSave: async () => {
+          setPendingLeave((prev) => (prev ? { ...prev, error: null } : prev));
           const [navOk, configOk] = await Promise.all([
             navDirty ? navPushToRemote(githubToken!) : Promise.resolve(true),
             configDirty ? configPushToRemote(githubToken!) : Promise.resolve(true),
@@ -89,8 +92,9 @@ export function useAdminSyncGuard() {
             setPendingLeave(null);
             navigate();
           } else {
-            setError('推送失败，未离开页面，请重试或丢弃改动');
-            setPendingLeave(null);
+            setPendingLeave((prev) =>
+              prev ? { ...prev, error: '推送失败，请重试或丢弃改动' } : prev
+            );
           }
         },
         onDiscard: () => {
