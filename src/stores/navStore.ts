@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ICategory, IWebsite } from '@/types';
-import { getFileContent, updateFileContent } from '@/lib/githubApi';
+import { getFileContent, updateFileContent, decodeContent } from '@/lib/githubApi';
 import { owner, repo, branch, dbPath } from '@/lib/config';
 
 // 数据差异结果类型
@@ -87,14 +87,6 @@ const saveToLocalStorage = (categories: ICategory[]): void => {
   } catch (error) {
     console.warn('Failed to save to localStorage:', error);
   }
-};
-
-// decode base64 content from GitHub API (UTF-8 safe)
-const decodeContent = (base64: string): string => {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return new TextDecoder('utf-8').decode(bytes);
 };
 
 const fetchRemoteData = async (githubToken: string): Promise<ICategory[] | null> => {

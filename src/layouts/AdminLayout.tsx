@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { useAuthStore } from '@/stores/authStore';
+import { useConfigStore } from '@/stores/configStore';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import { useAdminSyncGuard } from '@/hooks/useAdminSyncGuard';
 
@@ -13,9 +15,11 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const { isAuthenticated, checkAuth, logout } = useAuthStore();
+  const { setTheme } = useTheme();
   const [authLoading, setAuthLoading] = useState(true);
+  const enabled = !authLoading && isAuthenticated;
   const { status, error, retry, confirmLeave, pendingLeave } =
-    useAdminSyncGuard();
+    useAdminSyncGuard(enabled);
 
   useEffect(() => {
     const run = async () => {
@@ -38,6 +42,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleBackHome = () => {
     confirmLeave(() => router.push('/'));
+  };
+
+  const handleDiscard = () => {
+    setTheme(useConfigStore.getState().remoteSnapshot.site.theme);
+    pendingLeave!.onDiscard();
   };
 
   if (authLoading) {
@@ -118,7 +127,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 取消
               </button>
               <button
-                onClick={pendingLeave.onDiscard}
+                onClick={handleDiscard}
                 className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
               >
                 丢弃

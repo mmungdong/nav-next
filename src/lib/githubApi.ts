@@ -3,6 +3,14 @@ import { owner, repo } from './config';
 // GitHub API 基础URL
 const GITHUB_API_BASE = 'https://api.github.com';
 
+// decode base64 content from GitHub API (UTF-8 safe)
+export function decodeContent(base64: string): string {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
 // 验证 GitHub Token 的有效性
 interface GitHubUser {
   login: string;
@@ -127,7 +135,7 @@ export async function getFileContent(
   owner: string,
   repo: string,
   path: string,
-  branch: string = 'main'
+  branch: string
 ) {
   try {
     const response = await fetch(

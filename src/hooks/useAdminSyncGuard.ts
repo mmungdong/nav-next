@@ -15,7 +15,7 @@ interface PendingLeave {
   onCancel: () => void;
 }
 
-export function useAdminSyncGuard() {
+export function useAdminSyncGuard(enabled: boolean) {
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
   const [pendingLeave, setPendingLeave] = useState<PendingLeave | null>(null);
@@ -55,10 +55,10 @@ export function useAdminSyncGuard() {
     }
   }, [githubToken, navForcePull, configForcePull]);
 
-  // enter: pull on mount
+  // enter: pull on mount (gated on auth completion)
   useEffect(() => {
-    runPull();
-  }, [runPull]);
+    if (enabled) runPull();
+  }, [enabled, runPull]);
 
   // beforeunload guard when dirty
   useEffect(() => {

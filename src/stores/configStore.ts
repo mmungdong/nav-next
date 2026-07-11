@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ISiteConfig } from '@/types';
-import { getFileContent, updateFileContent } from '@/lib/githubApi';
+import { getFileContent, updateFileContent, decodeContent } from '@/lib/githubApi';
 import { owner, repo, branch, configPath } from '@/lib/config';
 
 export const DEFAULT_SITE_CONFIG: ISiteConfig = {
@@ -49,13 +49,6 @@ const saveToLocalStorage = (config: ISiteConfig): void => {
   } catch (error) {
     console.warn('Failed to save site config to localStorage:', error);
   }
-};
-
-const decodeContent = (base64: string): string => {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return new TextDecoder('utf-8').decode(bytes);
 };
 
 const fetchConfigData = async (isAdmin = false): Promise<ISiteConfig> => {
