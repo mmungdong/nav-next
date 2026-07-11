@@ -2,13 +2,28 @@
   "site": {
     "name": "Nav Next",
     "description": "个人导航站",
-    "theme": "system"
+    "theme": "light"
   },
   "search": {
     "engines": [
-      { "id": "google", "name": "Google", "url": "https://www.google.com/search?q=", "icon": "google" },
-      { "id": "bing", "name": "Bing", "url": "https://www.bing.com/search?q=", "icon": "bing" },
-      { "id": "baidu", "name": "百度", "url": "https://www.baidu.com/s?wd=", "icon": "baidu" }
+      {
+        "id": "google",
+        "name": "Google",
+        "url": "https://www.google.com/search?q=",
+        "icon": "google"
+      },
+      {
+        "id": "bing",
+        "name": "Bing",
+        "url": "https://www.bing.com/search?q=",
+        "icon": "bing"
+      },
+      {
+        "id": "baidu",
+        "name": "百度",
+        "url": "https://www.baidu.com/s?wd=",
+        "icon": "baidu"
+      }
     ]
   }
 }
