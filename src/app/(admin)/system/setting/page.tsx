@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useConfigStore } from '@/stores/configStore';
 import { useAuthStore } from '@/stores/authStore';
-import { ISiteSettings, ThemeMode } from '@/types';
+import { ThemeMode } from '@/types';
 
 export default function SettingManagementPage() {
   const { theme, setTheme } = useTheme();
@@ -13,19 +13,12 @@ export default function SettingManagementPage() {
 
   const { siteConfig, saveConfig, pushToRemote, dirty } = useConfigStore();
   const { githubToken } = useAuthStore();
-
-  const [form, setForm] = useState<ISiteSettings>(siteConfig.site);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    setForm(siteConfig.site);
-  }, [siteConfig.site]);
-
-  const update = (patch: Partial<ISiteSettings>) => {
-    const next = { ...form, ...patch };
-    setForm(next);
-    saveConfig({ ...siteConfig, site: next });
+  // siteConfig.site is the single source of truth — no local form shadow.
+  const update = (patch: Partial<typeof siteConfig.site>) => {
+    saveConfig({ ...siteConfig, site: { ...siteConfig.site, ...patch } });
   };
 
   const handleThemeChange = (value: ThemeMode) => {
@@ -63,7 +56,7 @@ export default function SettingManagementPage() {
           <input
             type="text"
             id="siteName"
-            value={form.name}
+            value={siteConfig.site.name}
             onChange={(e) => update({ name: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
@@ -75,7 +68,7 @@ export default function SettingManagementPage() {
           </label>
           <textarea
             id="siteDescription"
-            value={form.description}
+            value={siteConfig.site.description}
             onChange={(e) => update({ description: e.target.value })}
             rows={3}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -88,7 +81,7 @@ export default function SettingManagementPage() {
           </label>
           <select
             id="theme"
-            value={mounted ? (theme === 'system' ? 'system' : (theme as ThemeMode)) : 'system'}
+            value={mounted ? (theme as ThemeMode) : 'system'}
             disabled={!mounted}
             onChange={(e) => handleThemeChange(e.target.value as ThemeMode)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus-ring dark:bg-gray-700 dark:border-gray-600 dark:text-white"
