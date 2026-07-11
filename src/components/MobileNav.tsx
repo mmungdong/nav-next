@@ -1,11 +1,12 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { Folder } from 'lucide-react';
 import { ICategory } from '@/types';
 import { useState, useMemo } from 'react';
 import { scrollToTop } from '@/lib/animations';
+import { useSearch } from '@/components/SearchContext';
 
-const DEFAULT_CATEGORY_ICON = '📂';
 const DEFAULT_TITLE = '导航';
 
 interface MobileNavProps {
@@ -16,6 +17,7 @@ interface MobileNavProps {
 
 export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { openSearch } = useSearch();
 
   // 使用 useMemo 缓存当前激活的分类
   const activeCategory = useMemo(
@@ -40,9 +42,11 @@ export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) =>
               onClick={() => setIsExpanded(!isExpanded)}
               className="flex-1 flex items-center justify-center py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
             >
-              <span className="text-lg mr-2">
-                {activeCategory?.icon || DEFAULT_CATEGORY_ICON}
-              </span>
+              {activeCategory?.icon ? (
+                <span className="text-lg mr-2">{activeCategory.icon}</span>
+              ) : (
+                <Folder className="w-5 h-5 mr-2" />
+              )}
               <span className="text-sm font-medium truncate max-w-[80px]">
                 {activeCategory?.title || DEFAULT_TITLE}
               </span>
@@ -69,11 +73,7 @@ export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) =>
 
             {/* 搜索按钮 */}
             <button
-              onClick={() => {
-                const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-                searchInput?.focus();
-                searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }}
+              onClick={openSearch}
               className="flex flex-col items-center justify-center py-2 px-4 text-gray-500 dark:text-gray-400"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,7 +139,11 @@ export const MobileNav = ({ categories, activeId, onSelect }: MobileNavProps) =>
                           }
                         `}
                       >
-                        <span className="text-2xl mr-3">{category.icon || DEFAULT_CATEGORY_ICON}</span>
+                        {category.icon ? (
+                          <span className="text-2xl mr-3">{category.icon}</span>
+                        ) : (
+                          <Folder className="w-6 h-6 mr-3" />
+                        )}
                         <span className="flex-1 text-left font-medium">{category.title}</span>
                         <span className={`
                           text-xs px-2 py-1 rounded-full

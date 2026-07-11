@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 
 export default function SettingManagementPage() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [settings, setSettings] = useState({
-    siteName: 'Guidebook',
-    siteDescription: 'Brookside Guidebook',
+    siteName: 'Nav Next',
+    siteDescription: '个人导航与书签管理',
     siteKeywords: '导航,网站导航,实用工具',
     icpNumber: '',
     analyticsCode: '',
-    theme: 'light',
+    theme: 'system',
     enableDarkMode: true,
     enablePWA: true,
     enableSEO: true,
@@ -76,9 +81,14 @@ export default function SettingManagementPage() {
               <select
                 id="theme"
                 name="theme"
-                value={settings.theme}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                value={mounted ? (theme === 'system' ? 'auto' : theme ?? 'auto') : 'auto'}
+                disabled={!mounted}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTheme(v === 'auto' ? 'system' : v);
+                  handleChange(e);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus-ring dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="light">浅色主题</option>
                 <option value="dark">深色主题</option>

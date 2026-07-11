@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Folder } from 'lucide-react';
 import { useNavStore } from '@/stores/navStore';
 import { animationConfig } from '@/lib/animations';
 import { ICategory } from '@/types';
@@ -11,21 +12,6 @@ import { WebsiteCard } from '@/components/WebsiteCard';
 import { CategoryNav } from '@/components/CategoryNav';
 import { SkeletonLoader } from '@/components/Skeleton';
 import { MobileNav } from '@/components/MobileNav';
-
-// 1. 定义统一的文件夹图标组件 (与侧边栏保持一致)
-const FolderIcon = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 2H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-  </svg>
-);
 
 export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
@@ -51,21 +37,6 @@ export default function Home() {
 
   // 预加载网站图标
   usePreloadImages(allIconUrls, { enabled: !loading, maxConcurrent: 5 });
-
-  // 键盘快捷键：⌘K 聚焦搜索框
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        const searchInput = document.getElementById('main-search-input');
-        searchInput?.focus();
-        searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // 过滤逻辑 Memoization
   const filteredCategories = useMemo(() => {
@@ -131,11 +102,6 @@ export default function Home() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-            <kbd className="hidden sm:inline-flex items-center h-6 px-2 text-xs font-sans font-medium text-gray-400 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900">
-              ⌘ K
-            </kbd>
-          </div>
         </div>
       </div>
 
@@ -194,7 +160,7 @@ export default function Home() {
                     {category.icon ? (
                       <span className="text-3xl filter drop-shadow-sm leading-none">{category.icon}</span>
                     ) : (
-                      <FolderIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      <Folder className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                     )}
                   </span>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">

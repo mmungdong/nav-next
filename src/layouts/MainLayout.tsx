@@ -4,6 +4,7 @@ import { useNavStore } from '@/stores/navStore';
 import { useAuthStore } from '@/stores/authStore';
 import SearchModal from '@/components/SearchModal';
 import FloatingControls from '@/components/FloatingControls';
+import { SearchProvider } from '@/components/SearchContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -33,22 +34,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }, []);
 
   return (
-    // 应用点阵背景
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 bg-dot-pattern text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100">
+    // Grid background
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 bg-grid-pattern text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100">
+      <SearchProvider openSearch={() => setIsSearchModalOpen(true)}>
 
-      {/* 内容容器 */}
-      <div className="w-full min-h-screen">
-        {children}
-      </div>
+        {/* 内容容器 */}
+        <div className="w-full min-h-screen">
+          {children}
+        </div>
 
-      {/* 全局悬浮组件 */}
-      <FloatingControls onOpenSearch={() => setIsSearchModalOpen(true)} />
+        {/* 全局悬浮组件 */}
+        <FloatingControls onOpenSearch={() => setIsSearchModalOpen(true)} />
 
-      {/* 全局搜索模态框 */}
-      <SearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-      />
+        {/* 全局搜索模态框 */}
+        <SearchModal
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+        />
+      </SearchProvider>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search as SearchIcon } from 'lucide-react';
 import SiteSearchResults from './SiteSearchResults';
 import OptimizedImage from '@/components/OptimizedImage';
 import { animationConfig } from '@/lib/animations';
@@ -23,9 +24,18 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEngine, setSelectedEngine] = useState('google');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const previousActiveRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // 搜索引擎配置
   const searchEngines: SearchEngine[] = [
+    {
+      id: 'internal',
+      name: '站内',
+      icon: '',
+      url: '',
+      isInternal: true,
+    },
     {
       id: 'google',
       name: 'Google',
@@ -63,30 +73,45 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  // 键盘事件处理
+  // 键盘事件处理 + 焦点陷阱
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
 
     if (isOpen) {
+      previousActiveRef.current = document.activeElement as HTMLElement;
       document.addEventListener('keydown', handleKeyDown);
       // 阻止背景滚动
       document.body.style.overflow = 'hidden';
-      // 自动聚焦到搜索框
-      setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
-      }, 100);
     }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       // 恢复背景滚动
       document.body.style.overflow = '';
+      // 焦点归还到触发元素
+      if (previousActiveRef.current) {
+        previousActiveRef.current.focus?.();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -113,6 +138,13 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
 
           {/* Modal内容 */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="搜索"
+            onAnimationComplete={() => {
+              if (isOpen) searchInputRef.current?.focus();
+            }}
             initial={animationConfig.modal.content.enter.initial}
             animate={animationConfig.modal.content.enter.animate}
             exit={animationConfig.modal.content.exit.animate}
@@ -142,7 +174,6 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                   <input
                     ref={searchInputRef}
                     type="text"
-                    autoFocus
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -151,7 +182,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                       }
                     }}
                     placeholder="输入搜索关键词..."
-                    className="w-full px-4 py-3 pl-12 bg-white/50 dark:bg-gray-700/50 backdrop-blur-xl border border-white/30 dark:border-gray-600/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500 shadow-inner"
+                    className="w-full px-4 py-3 pl-12 bg-white/50 dark:bg-gray-700/50 backdrop-blur-xl border border-white/30 dark:border-gray-600/30 rounded-xl focus-ring dark:text-white transition-all placeholder-gray-400 dark:placeholder-gray-500 shadow-inner"
                   />
                   <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
                     <svg
@@ -210,7 +241,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
                       }`}
                     >
                       {engine.id === 'internal' ? (
-                        <span className="text-xl mr-3">{engine.icon}</span>
+                        <SearchIcon className="w-5 h-5 mr-3 text-blue-500" />
                       ) : (
                         <OptimizedImage
                           src={engine.icon}

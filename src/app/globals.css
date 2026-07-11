@@ -14,11 +14,9 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
@@ -46,48 +44,39 @@ body {
   border-radius: 9999px; /* rounded-full */
 }
 
-/* 深色模式下的滚动条颜色 */
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background-color: var(--color-gray-600);
-  }
+/* Scrollbar color in dark mode */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-600);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-gray-400);
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-gray-500);
-  }
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-gray-500);
 }
 
-/* === 2. 科技感微网格背景 (Tech Grid) === */
+/* === 2. 页面背景：固定渐变 + 均匀网格 (Fixed gradient + grid) ===
+   渐变锚定视口（滚动不动），上下亮度一致避免越拉越暗；
+   网格铺满全页无 mask，保留科技感且亮度均匀。 */
 .bg-grid-pattern {
-  /* 定义网格颜色变量，使用极低的不透明度 */
-  --grid-color: color-mix(in srgb, var(--color-gray-900) 3%, transparent);
+  --grid-color: color-mix(in srgb, var(--color-gray-900) 6%, transparent);
+  --grad-top: color-mix(in srgb, #f8fafc 70%, transparent);
+  --grad-bottom: color-mix(in srgb, #e2e8f0 70%, transparent);
 
-  /* 创建网格：水平线 + 垂直线 */
   background-image:
     linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-
-  /* 网格大小 */
-  background-size: 40px 40px;
-
-  /* 关键：使用 mask 让网格只在顶部和中心显示，向下淡出 */
-  /* 这样底部内容多的时候背景不会显得乱 */
-  mask-image: radial-gradient(ellipse at top center, black 40%, transparent 90%);
-  -webkit-mask-image: radial-gradient(ellipse at top center, black 40%, transparent 90%);
-
-  /* 固定背景，不随滚动条滚动 */
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grad-top), var(--grad-bottom));
+  background-size: 40px 40px, 40px 40px, 100% 100%;
   background-attachment: fixed;
 }
 
-/* 深色模式下的网格颜色 */
 .dark .bg-grid-pattern {
-  --grid-color: color-mix(in srgb, var(--color-white) 5%, transparent);
+  --grid-color: color-mix(in srgb, var(--color-white) 7%, transparent);
+  --grad-top: color-mix(in srgb, #1e293b 70%, transparent);
+  --grad-bottom: color-mix(in srgb, #0f172a 70%, transparent);
 }
 
 
@@ -113,4 +102,19 @@ body {
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: var(--color-gray-700);
+}
+
+/* Unified focus ring for interactive inputs */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500;
+}
+
+/* iOS safe area inset for bottom-fixed bars */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@supports not (padding: env(safe-area-inset-bottom)) {
+  .safe-area-pb {
+    padding-bottom: 0;
+  }
 }

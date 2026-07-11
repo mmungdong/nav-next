@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useScrollSpy = (ids: string[], offset: number = 100) => {
-  const [activeId, setActiveId] = useState<string>('');
+  const [activeId, setActiveId] = useState<string>(ids[0] ?? '');
 
   // 标记是否是由点击导航触发的滚动
   const isClickScrolling = useRef(false);
@@ -50,6 +50,9 @@ export const useScrollSpy = (ids: string[], offset: number = 100) => {
         }
       }
     };
+
+    // Keep a valid default: fall back to first id when current is stale/empty
+    setActiveId((prev) => (prev && ids.includes(prev) ? prev : ids[0] ?? ''));
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // 初始化检查

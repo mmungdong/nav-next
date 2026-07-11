@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { animationConfig } from '@/lib/animations';
 
 interface AdminSidebarProps {
@@ -24,139 +24,46 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loadingHref, setLoadingHref] = useState<string | null>(null);
-  const [clickLocked, setClickLocked] = useState<boolean>(false);
-  const [scrollFollowing, setScrollFollowing] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
 
-  // 精确匹配当前路径
   const getActiveHref = useCallback((currentPath: string) => {
-    // 精确匹配
     const exactMatch = menuItems.find((item) => item.href === currentPath);
     if (exactMatch) return exactMatch.href;
 
-    // 前缀匹配（处理子路径）
     const prefixMatch = menuItems.find((item) =>
       currentPath.startsWith(item.href)
     );
     return prefixMatch ? prefixMatch.href : '';
   }, []);
 
-  // 获取当前应该激活的链接
-  const getActualActiveHref = useCallback(() => {
-    // 如果处于点击锁定状态，则根据路径计算（但不跟随滚动）
-    if (clickLocked) {
-      return getActiveHref(pathname);
-    }
-    // 如果启用了滚动跟随，则根据路径计算
-    if (scrollFollowing) {
-      return getActiveHref(pathname);
-    }
-    // 默认情况下根据路径计算
-    return getActiveHref(pathname);
-  }, [pathname, clickLocked, scrollFollowing, getActiveHref]);
+  const activeHref = getActiveHref(pathname);
 
-  // 获取当前激活的链接
-  const activeHref = getActualActiveHref();
-
-  // 判断是否激活
   const isActive = useCallback(
-    (href: string) => {
-      return activeHref === href;
-    },
+    (href: string) => activeHref === href,
     [activeHref]
   );
 
-  // 判断是否加载中
   const isLoading = useCallback(
     (href: string) => loadingHref === href,
     [loadingHref]
   );
 
-  // 处理菜单点击
   const handleMenuClick = useCallback(
     (href: string) => {
       return (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
-
-        // 设置点击锁定状态
-        setClickLocked(true);
         setLoadingHref(href);
-
-        // 跳转到新页面
         router.push(href);
       };
     },
     [router]
   );
 
-  // 当 pathname 变化时，设置点击锁定状态
+  // Clear loading spinner when navigation completes
   useEffect(() => {
-    let ignore = false;
-
-    const updateState = () => {
-      if (!ignore) {
-        setClickLocked(true);
-
-        // 延迟解锁，允许用户滚动时重新激活跟随功能
-        const timer = setTimeout(() => {
-          if (!ignore) {
-            setClickLocked(false);
-            setLoadingHref(null);
-          }
-        }, 1000); // 1秒后解锁
-
-        return () => clearTimeout(timer);
-      }
-    };
-
-    const cleanup = updateState();
-
-    return () => {
-      ignore = true;
-      if (cleanup) cleanup();
-    };
+    setLoadingHref(null);
   }, [pathname]);
 
-  // 监听滚动事件，当用户开始滚动时启用跟随功能
-  useEffect(() => {
-    let scrollTimer: NodeJS.Timeout | null = null;
-
-    const handleScroll = () => {
-      // 当用户开始滚动时，启用滚动跟随
-      setScrollFollowing(true);
-
-      // 清除之前的定时器
-      if (scrollTimer) {
-        clearTimeout(scrollTimer);
-      }
-
-      // 设置定时器，在停止滚动一段时间后禁用滚动跟随
-      scrollTimer = setTimeout(() => {
-        setScrollFollowing(false);
-      }, 2000); // 2秒无滚动后禁用跟随
-    };
-
-    // 添加滚动事件监听器
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimer) {
-        clearTimeout(scrollTimer);
-      }
-    };
-  }, []);
-
-  // 组件卸载时清除状态
-  useEffect(() => {
-    return () => {
-      setClickLocked(false);
-      setLoadingHref(null);
-      setScrollFollowing(false);
-    };
-  }, []);
-
-  // 退出登录确认处理
   const handleLogoutConfirm = () => {
     if (onLogout) {
       onLogout();
@@ -167,7 +74,7 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
   return (
     <div className="h-screen sticky top-0 w-[200px] lg:w-[250px]">
       <div className="h-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-r-xl flex flex-col">
-        {/* 头部区域 */}
+        {/* Header */}
         <div className="p-5 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">
@@ -176,67 +83,53 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
           </div>
         </div>
 
-        {/* 菜单区域 */}
+        {/* Menu */}
         <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
           <ul className="space-y-2">
-            <AnimatePresence>
-              {menuItems.map((item, index) => (
-                <motion.li
-                  key={item.href}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{
+            {menuItems.map((item) => (
+              <motion.li
+                key={item.href}
+                whileHover={{
+                  scale: animationConfig.sidebar.menuItem.hover.scale,
+                  transition: {
                     duration:
-                      animationConfig.sidebar.menuItem.enter.duration / 1000,
-                    delay:
-                      index *
-                      animationConfig.sidebar.menuItem.enter.staggerDelay,
-                    ease: animationConfig.sidebar.menuItem.enter.ease,
-                  }}
-                  whileHover={{
-                    scale: animationConfig.sidebar.menuItem.hover.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.hover.duration / 1000,
-                    },
-                  }}
-                  whileTap={{
-                    scale: animationConfig.sidebar.menuItem.tap.scale,
-                    transition: {
-                      duration:
-                        animationConfig.sidebar.menuItem.tap.duration / 1000,
-                    },
-                  }}
+                      animationConfig.sidebar.menuItem.hover.duration / 1000,
+                  },
+                }}
+                whileTap={{
+                  scale: animationConfig.sidebar.menuItem.tap.scale,
+                  transition: {
+                    duration:
+                      animationConfig.sidebar.menuItem.tap.duration / 1000,
+                  },
+                }}
+              >
+                <a
+                  href={item.href}
+                  onClick={handleMenuClick(item.href)}
+                  className={`flex items-center px-5 py-3 text-sm rounded-lg transition-all duration-200 ease-in-out transform ${
+                    isActive(item.href)
+                      ? 'text-blue-600 dark:text-blue-400 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-l-4 border-blue-500 dark:border-blue-400 font-medium shadow-md'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:shadow-sm'
+                  }`}
                 >
-                  <a
-                    href={item.href}
-                    onClick={handleMenuClick(item.href)}
-                    className={`flex items-center px-5 py-3 text-sm rounded-lg transition-all duration-200 ease-in-out transform ${
-                      isActive(item.href)
-                        ? 'text-blue-600 dark:text-blue-400 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-l-4 border-blue-500 dark:border-blue-400 font-medium shadow-md'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className="flex items-center truncate">
-                      <span>{item.name}</span>
-                      {isLoading(item.href) && (
-                        <motion.span
-                          className="ml-2 inline-block w-3 h-3 border-t-2 border-r-2 border-blue-500 rounded-full animate-spin"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                        />
-                      )}
-                    </span>
-                  </a>
-                </motion.li>
-              ))}
-            </AnimatePresence>
+                  <span className="flex items-center truncate">
+                    <span>{item.name}</span>
+                    {isLoading(item.href) && (
+                      <motion.span
+                        className="ml-2 inline-block w-3 h-3 border-t-2 border-r-2 border-blue-500 rounded-full animate-spin"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      />
+                    )}
+                  </span>
+                </a>
+              </motion.li>
+            ))}
           </ul>
         </nav>
 
-        {/* 底部操作区域 */}
+        {/* Footer actions */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex flex-col space-y-2">
             <motion.button
@@ -282,7 +175,7 @@ export default function AdminSidebar({ onLogout }: AdminSidebarProps) {
           </div>
         </div>
 
-        {/* 退出登录确认对话框 */}
+        {/* Logout confirmation dialog */}
         {showLogoutConfirm && (
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
             <div
