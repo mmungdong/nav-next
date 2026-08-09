@@ -249,6 +249,16 @@
         "desc": "",
         "url": "https://www.aitmpl.com/",
         "icon": "https://www.google.com/s2/favicons?domain=www.aitmpl.com"
+      },
+      {
+        "id": 1786237719269,
+        "name": "bewaild",
+        "desc": "chatgpt / gemini 代充值",
+        "url": "https://bewild.ai/",
+        "icon": "https://www.google.com/s2/favicons?domain=bewild.ai",
+        "rate": 5,
+        "top": false,
+        "ownVisible": false
       }
     ]
   },
