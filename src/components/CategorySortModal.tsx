@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ICategory } from '@/types';
 
 interface CategorySortModalProps {
   categories: ICategory[];
   isOpen: boolean;
   onClose: () => void;
-  onSave: (sortedCategories: ICategory[]) => void;
+  onSave: (orderedIds: number[]) => void;
 }
 
 export default function CategorySortModal({
@@ -16,14 +16,38 @@ export default function CategorySortModal({
   onClose,
   onSave,
 }: CategorySortModalProps) {
-  const [sortedCategories, setSortedCategories] = useState<ICategory[]>(() => [
-    ...categories,
-  ]);
+  const [orderedIds, setOrderedIds] = useState<number[]>([]);
+  const [stale, setStale] = useState(false);
+  const snapshotRef = useRef('');
 
-  const handleDragStart = (
-    e: React.DragEvent<HTMLDivElement>,
-    index: number
-  ) => {
+  const reload = () => {
+    const ids = categories.map((category) => category.id);
+    setOrderedIds(ids);
+    snapshotRef.current = ids.join(',');
+    setStale(false);
+  };
+
+  // Re-initialise from the live list every time the dialog opens; submitting
+  // later only sends IDs so it can never roll back newer field edits.
+  useEffect(() => {
+    if (!isOpen) return;
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !snapshotRef.current) return;
+    if (categories.map((category) => category.id).join(',') !== snapshotRef.current) {
+      setStale(true);
+    }
+  }, [categories, isOpen]);
+
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const orderedCategories = orderedIds
+    .map((id) => categoryMap.get(id))
+    .filter((category): category is ICategory => Boolean(category));
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData('dragIndex', index.toString());
   };
 
@@ -31,25 +55,23 @@ export default function CategorySortModal({
     e.preventDefault();
   };
 
-  const handleDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    dropIndex: number
-  ) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
     e.preventDefault();
-    const dragIndex = parseInt(e.dataTransfer.getData('dragIndex'));
+    const dragIndex = parseInt(e.dataTransfer.getData('dragIndex'), 10);
+    if (Number.isNaN(dragIndex) || dragIndex === dropIndex) return;
 
-    if (dragIndex === dropIndex) return;
-
-    const newCategories = [...sortedCategories];
-    const [draggedItem] = newCategories.splice(dragIndex, 1);
-    newCategories.splice(dropIndex, 0, draggedItem);
-
-    setSortedCategories(newCategories);
+    setOrderedIds((prev) => {
+      const next = [...prev];
+      const [dragged] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, dragged);
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(sortedCategories);
+    if (stale) return;
+    onSave(orderedIds);
   };
 
   if (!isOpen) return null;
@@ -59,43 +81,40 @@ export default function CategorySortModal({
       <div
         className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm pointer-events-auto"
         onClick={onClose}
-      ></div>
+      />
       <div
-        className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-white/30 dark:border-gray-700/50 pointer-events-auto custom-scrollbar"
+        role="dialog"
+        aria-modal="true"
+        aria-label="分类排序"
+        className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90dvh] overflow-y-auto border border-white/30 dark:border-gray-700/50 pointer-events-auto custom-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-between items-center">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-            分类排序
-          </h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">分类排序</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            className="min-w-[44px] min-h-[44px] text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            aria-label="关闭"
           >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4">
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              拖拽分类来调整显示顺序
-            </p>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">拖拽分类来调整显示顺序</p>
+
+            {stale && (
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-3 text-sm text-amber-800 dark:text-amber-200">
+                <span>分类列表已在别处发生变化，请重新载入后再保存。</span>
+                <button type="button" onClick={reload} className="underline font-medium">
+                  重新载入
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
-              {sortedCategories.map((category, index) => (
+              {orderedCategories.map((category, index) => (
                 <div
                   key={category.id}
                   draggable
@@ -106,18 +125,8 @@ export default function CategorySortModal({
                 >
                   <div className="flex items-center w-full">
                     <div className="flex-shrink-0 mr-3 cursor-move">
-                      <svg
-                        className="h-5 w-5 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 8h16M4 16h16"
-                        />
+                      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                       </svg>
                     </div>
                     <div className="flex-shrink-0 mr-3">
@@ -141,13 +150,14 @@ export default function CategorySortModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+              className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
             >
               取消
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+              disabled={stale}
+              className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
             >
               保存
             </button>

@@ -11,14 +11,15 @@ export default function SettingManagementPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const { siteConfig, saveConfig, pushToRemote, dirty } = useConfigStore();
+  const { siteConfig, saveConfig, pushToRemote, dirty, conflict } = useConfigStore();
   const { githubToken } = useAuthStore();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // siteConfig.site is the single source of truth — no local form shadow.
   const update = (patch: Partial<typeof siteConfig.site>) => {
-    saveConfig({ ...siteConfig, site: { ...siteConfig.site, ...patch } });
+    const saved = saveConfig({ ...siteConfig, site: { ...siteConfig.site, ...patch } });
+    if (!saved) setMessage({ type: 'error', text: '本机保存失败，改动仅在当前页面内' });
   };
 
   const handleThemeChange = (value: ThemeMode) => {
@@ -32,14 +33,14 @@ export default function SettingManagementPage() {
       return;
     }
     setSaving(true);
-    const ok = await pushToRemote(githubToken);
+    const result = await pushToRemote(githubToken);
     setSaving(false);
     setMessage(
-      ok
-        ? { type: 'success', text: '已保存并推送到远程' }
-        : { type: 'error', text: '推送失败，请重试' }
+      result.status === 'success'
+        ? { type: 'success', text: 'GitHub 已更新；首页需等待部署后才会显示' }
+        : { type: 'error', text: result.message }
     );
-    setTimeout(() => setMessage(null), 3000);
+    setTimeout(() => setMessage(null), 5000);
   };
 
   return (
@@ -99,12 +100,16 @@ export default function SettingManagementPage() {
         )}
 
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-          <span className={`text-sm ${dirty ? 'text-amber-600' : 'text-gray-400'}`}>
-            {dirty ? '● 有未保存的改动' : '○ 已同步'}
+          <span
+            className={`text-sm ${
+              conflict ? 'text-red-600' : dirty ? 'text-amber-600' : 'text-gray-400'
+            }`}
+          >
+            {conflict ? '● 存在冲突，推送已锁定' : dirty ? '● 已保存到本机，尚未推送' : '○ 未修改 / 已同步'}
           </span>
           <button
             onClick={handleSave}
-            disabled={!dirty || saving}
+            disabled={!dirty || saving || Boolean(conflict)}
             className="px-6 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
           >
             {saving ? '保存中…' : '保存并推送'}

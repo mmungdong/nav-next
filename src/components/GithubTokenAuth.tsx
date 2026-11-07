@@ -25,10 +25,11 @@ export default function GithubTokenAuth({
 }: GithubTokenAuthProps) {
   const router = useRouter();
   const [token, setToken] = useState('');
+  const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const { validateGithubToken, isAuthenticated } = useAuthStore();
+  const { validateGithubToken, isAuthenticated, authError } = useAuthStore();
 
   // 检查是否已经认证
   useEffect(() => {
@@ -36,6 +37,10 @@ export default function GithubTokenAuth({
       router.push('/system');
     }
   }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (authError) setError(authError);
+  }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +55,7 @@ export default function GithubTokenAuth({
     }
 
     try {
-      const result = await validateGithubToken(token);
+      const result = await validateGithubToken(token, { remember });
 
       if (result.valid) {
         setSuccess(true);
@@ -109,9 +114,24 @@ export default function GithubTokenAuth({
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               您可以在 GitHub 的 Settings &gt; Developer settings &gt; Personal
-              access tokens 中生成新的 Token
+              access tokens 中生成新的 Token。Token 默认只保存在本标签页会话中。
             </p>
           </div>
+
+          <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              记住此设备（保存在本机 localStorage）
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                仅在可信设备开启。页面脚本仍可读取本地凭据，这不是加密存储。
+              </span>
+            </span>
+          </label>
 
           {error && (
             <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">

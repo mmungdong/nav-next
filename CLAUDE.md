@@ -17,11 +17,16 @@ This is a **Next.js 16** web application (Bookmarks/导航网站) - a personal b
 
 ```bash
 npm run dev        # Start development server
-npm run build      # Production build
+npm run build      # Production build (static export to out/)
 npm run start      # Start production server
 npm run lint       # Run ESLint
 npm run lint:fix   # Fix ESLint issues
 npm run format     # Format code with Prettier
+npm run typecheck  # tsc --noEmit
+npm test           # Unit tests (node:test via tsx)
+npm run validate:data   # Validate public/data JSON
+npm run check:static    # Smoke-check the exported out/ artifact
+npm run test:e2e        # Playwright against out/ (run build first)
 ```
 
 ## Architecture

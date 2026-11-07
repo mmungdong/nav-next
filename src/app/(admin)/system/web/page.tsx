@@ -16,18 +16,21 @@ export default function WebManagementPage() {
   const {
     categories,
     loading,
-    fetchCategories,
     saveCategories,
     getLastSyncTime,
     pushToRemote,
+    checkRemote,
     dirty,
+    draftIssue,
+    conflict,
+    syncStatus,
   } = useNavStore();
 
   const { githubToken } = useAuthStore();
 
   // 状态管理
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewingCategory, setViewingCategory] = useState<ICategory | null>(null);
+  const [viewingCategoryId, setViewingCategoryId] = useState<number | null>(null);
 
   // Modals 状态
   const [editingWebsite, setEditingWebsite] = useState<IWebsite | undefined>(undefined);
@@ -50,8 +53,22 @@ export default function WebManagementPage() {
 
   // 排序状态
   const [isCategorySortModalOpen, setIsCategorySortModalOpen] = useState(false);
-  const [sortingCategory, setSortingCategory] = useState<ICategory | null>(null);
+  const [sortingCategoryId, setSortingCategoryId] = useState<number | null>(null);
   const [isWebsiteSortModalOpen, setIsWebsiteSortModalOpen] = useState(false);
+
+  // The detail view follows the live store, so edits/moves/deletes show up
+  // immediately and a deleted category drops out of the view.
+  // Membership changes are handled by deriving both objects from ids: a deleted
+  // category simply drops out of the view instead of leaving a stale object.
+  const viewingCategory = useMemo(
+    () => categories.find((category) => category.id === viewingCategoryId) ?? null,
+    [categories, viewingCategoryId]
+  );
+
+  const sortingCategory = useMemo(
+    () => categories.find((category) => category.id === sortingCategoryId) ?? null,
+    [categories, sortingCategoryId]
+  );
 
   // --- 核心逻辑优化：使用 useMemo 缓存搜索结果，避免重复计算 ---
   const { filteredCategories, filteredWebsites } = useMemo(() => {
@@ -98,9 +115,27 @@ export default function WebManagementPage() {
   const handlePushToRemote = async () => {
     if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
     setSavingRemote(true);
-    const ok = await pushToRemote(githubToken);
+    const result = await pushToRemote(githubToken);
     setSavingRemote(false);
-    showMessage(ok ? 'success' : 'error', ok ? '推送成功，远程仓库已更新' : '推送失败，请重试');
+    if (result.status === 'success') {
+      setLastSyncTime(new Date().toISOString());
+      showMessage('success', 'GitHub 已更新；首页需等待部署后才会显示新数据');
+      return;
+    }
+    showMessage('error', result.message);
+  };
+
+  const handleCheckRemote = async () => {
+    if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
+    const outcome = await checkRemote(githubToken, { manual: true });
+    if (outcome.result.status === 'success' && !outcome.checked) {
+      return showMessage('error', '尚未取得远程基线，无法检查更新');
+    }
+    if (outcome.result.status === 'success') {
+      showMessage('success', outcome.remoteChanged ? '已获取远程更新' : '远程没有新变化');
+      return;
+    }
+    showMessage('error', outcome.result.message);
   };
 
   // 保存网站
@@ -120,10 +155,13 @@ export default function WebManagementPage() {
         return category;
       });
 
-      await saveCategories(updatedCategories);
+      const saved = saveCategories(updatedCategories);
       setIsEditModalOpen(false);
       setEditingWebsite(undefined);
-      showMessage('success', '网站保存成功');
+      showMessage(
+        saved ? 'success' : 'error',
+        saved ? '网站已保存到本机，尚未推送' : '本机保存失败，改动仅在当前页面内'
+      );
     } catch (error) {
       console.error('保存网站失败:', error);
       showMessage('error', '保存网站失败');
@@ -146,10 +184,13 @@ export default function WebManagementPage() {
         }
         return category;
       });
-      await saveCategories(updatedCategories);
+      const saved = saveCategories(updatedCategories);
       setIsDeleteModalOpen(false);
       setDeletingWebsite(null);
-      showMessage('success', '网站已删除');
+      showMessage(
+        saved ? 'success' : 'error',
+        saved ? '网站已删除，尚未推送' : '本机保存失败，改动仅在当前页面内'
+      );
     } catch (error) {
       showMessage('error', '删除失败');
     }
@@ -181,10 +222,13 @@ export default function WebManagementPage() {
         return cat;
       });
 
-      await saveCategories(updatedCategories);
+      const saved = saveCategories(updatedCategories);
       setIsMoveModalOpen(false);
       setMovingWebsite(undefined);
-      showMessage('success', '移动成功');
+      showMessage(
+        saved ? 'success' : 'error',
+        saved ? '网站已移动，尚未推送' : '本机保存失败，改动仅在当前页面内'
+      );
     } catch (error) {
       showMessage('error', '移动失败');
     }
@@ -211,10 +255,13 @@ export default function WebManagementPage() {
       } else {
         updatedCategories = [...categories, { ...category, nav: [] }];
       }
-      await saveCategories(updatedCategories);
+      const saved = saveCategories(updatedCategories);
       setIsEditCategoryModalOpen(false);
       setEditingCategory(undefined);
-      showMessage('success', '分类保存成功');
+      showMessage(
+        saved ? 'success' : 'error',
+        saved ? '分类已保存到本机，尚未推送' : '本机保存失败，改动仅在当前页面内'
+      );
     } catch (error) {
       showMessage('error', '分类保存失败');
     }
@@ -229,37 +276,62 @@ export default function WebManagementPage() {
     if (!deletingCategory) return;
     try {
       const updatedCategories = categories.filter((cat) => cat.id !== deletingCategory.id);
-      await saveCategories(updatedCategories);
+      const saved = saveCategories(updatedCategories);
       setIsDeleteCategoryModalOpen(false);
       setDeletingCategory(null);
-      showMessage('success', '分类已删除');
+      showMessage(
+        saved ? 'success' : 'error',
+        saved ? '分类已删除，尚未推送' : '本机保存失败，改动仅在当前页面内'
+      );
     } catch (error) {
       showMessage('error', '删除分类失败');
     }
   };
 
-  // 排序相关
-  const handleSaveCategorySort = async (sortedCategories: ICategory[]) => {
-    await saveCategories(sortedCategories);
+  // 排序相关：只提交 ID 顺序，再与当前对象合并
+  const handleSaveCategorySort = async (orderedIds: number[]) => {
+    const categoryMap = new Map(categories.map((category) => [category.id, category]));
+    const sorted = orderedIds
+      .map((id) => categoryMap.get(id))
+      .filter((category): category is ICategory => Boolean(category));
+    if (sorted.length !== categories.length) {
+      showMessage('error', '分类列表已变化，请重新打开排序');
+      return;
+    }
+    const saved = saveCategories(sorted);
     setIsCategorySortModalOpen(false);
-    showMessage('success', '分类排序已保存');
+    showMessage(saved ? 'success' : 'error', saved ? '分类排序已保存到本机' : '本机保存失败，排序仅在页面内');
   };
 
-  const handleSaveWebsiteSort = async (categoryId: number, sortedWebsites: IWebsite[]) => {
-    const updatedCategories = categories.map((cat) =>
-      cat.id === categoryId ? { ...cat, nav: sortedWebsites } : cat
+  const handleSaveWebsiteSort = async (categoryId: number, orderedIds: number[]) => {
+    const current = categories.find((category) => category.id === categoryId);
+    if (!current) {
+      showMessage('error', '分类已不存在，请重新打开排序');
+      setIsWebsiteSortModalOpen(false);
+      return;
+    }
+    const websiteMap = new Map(current.nav.map((website) => [website.id, website]));
+    const sortedNav = orderedIds
+      .map((id) => websiteMap.get(id))
+      .filter((website): website is IWebsite => Boolean(website));
+    if (sortedNav.length !== current.nav.length) {
+      showMessage('error', '分类内网站已变化，请重新打开排序');
+      return;
+    }
+    const saved = saveCategories(
+      categories.map((category) =>
+        category.id === categoryId ? { ...category, nav: sortedNav } : category
+      )
     );
-    await saveCategories(updatedCategories);
     setIsWebsiteSortModalOpen(false);
-    showMessage('success', '网站排序已保存');
+    showMessage(saved ? 'success' : 'error', saved ? '网站排序已保存到本机' : '本机保存失败，排序仅在页面内');
   };
 
-  // 初始化
+  // 初始化：数据由 AdminLayout 的同步守卫统一恢复草稿，这里只刷新显示时间。
   useEffect(() => {
-    fetchCategories();
     const lastSync = getLastSyncTime();
     if (lastSync) setLastSyncTime(lastSync);
-  }, [fetchCategories, getLastSyncTime]);
+  }, [getLastSyncTime]);
 
   // 添加网站
   const handleAddWebsite = (category: ICategory) => {
@@ -296,14 +368,46 @@ export default function WebManagementPage() {
                 最后同步: {new Date(lastSyncTime).toLocaleString()}
               </p>
             )}
+            <p
+              className={`text-xs mt-1 ${
+                conflict
+                  ? 'text-red-600 dark:text-red-400'
+                  : dirty
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              {syncStatus === 'loading'
+                ? '正在校验远程数据…'
+                : conflict
+                  ? '存在冲突：本机草稿已保留，推送已锁定'
+                  : savingRemote
+                    ? '推送中…'
+                    : dirty
+                      ? '已保存到本机，尚未推送'
+                      : '未修改 / GitHub 已同步'}
+            </p>
+            {draftIssue && (
+              <p className="text-xs mt-1 text-red-600 dark:text-red-400">
+                {draftIssue}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3">
             {githubToken && (
               <button
-                className="flex items-center px-4 py-2 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-all font-medium"
+                className="flex items-center px-4 py-2 bg-gray-500/10 text-gray-600 dark:text-gray-300 border border-gray-400/20 rounded-lg hover:bg-gray-500/20 transition-all font-medium"
+                onClick={handleCheckRemote}
+              >
+                检查更新
+              </button>
+            )}
+            {githubToken && (
+              <button
+                className="flex items-center px-4 py-2 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-all font-medium disabled:opacity-50"
                 onClick={handlePushToRemote}
-                disabled={!dirty || savingRemote}
+                disabled={!dirty || savingRemote || Boolean(conflict)}
               >
                 {savingRemote ? '推送中…' : dirty ? '● 保存并推送' : '○ 已同步'}
               </button>
@@ -359,7 +463,7 @@ export default function WebManagementPage() {
                   {filteredCategories.map((category) => (
                     <div
                       key={category.id}
-                      onClick={() => setViewingCategory(category)}
+                      onClick={() => setViewingCategoryId(category.id)}
                       className="group bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer transition-all shadow-sm hover:shadow-md"
                     >
                       <div className="flex items-center space-x-3">
@@ -386,7 +490,7 @@ export default function WebManagementPage() {
                     </h2>
                     {viewingCategory && (
                       <button
-                        onClick={() => setViewingCategory(null)}
+                        onClick={() => setViewingCategoryId(null)}
                         className="text-sm text-blue-500 hover:text-blue-600 flex items-center"
                       >
                         <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -455,7 +559,7 @@ export default function WebManagementPage() {
                   </button>
                   <button
                     onClick={() => {
-                      setSortingCategory(category);
+                      setSortingCategoryId(category.id);
                       setIsWebsiteSortModalOpen(true);
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
@@ -562,13 +666,15 @@ export default function WebManagementPage() {
         onSave={handleSaveCategorySort}
       />
 
-      <WebsiteSortModal
-        key={sortingCategory?.id || 'new'}
-        category={sortingCategory || { id: 0, title: '', icon: '', nav: [] }}
-        isOpen={isWebsiteSortModalOpen}
-        onClose={() => setIsWebsiteSortModalOpen(false)}
-        onSave={handleSaveWebsiteSort}
-      />
+      {sortingCategory && (
+        <WebsiteSortModal
+          key={sortingCategory.id}
+          category={sortingCategory}
+          isOpen={isWebsiteSortModalOpen}
+          onClose={() => setIsWebsiteSortModalOpen(false)}
+          onSave={handleSaveWebsiteSort}
+        />
+      )}
     </div>
   );
 }

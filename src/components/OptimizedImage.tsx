@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import DefaultIcon, { isIconUrlFailed, markIconUrlAsFailed } from './DefaultIcon';
+import { isIconUrlFailed, markIconUrlAsFailed } from './DefaultIcon';
 
 interface OptimizedImageProps {
   src: string | undefined;
@@ -41,7 +41,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   if (!src || isIconUrlFailed(src) || hasError) {
     return (
       <div
-        className={`w-${width} h-${height} rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center ${fallbackClassName}`}
+        className={`rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden ${fallbackClassName}`}
+        style={{ width, height, flexShrink: 0 }}
       >
         <span className="text-white text-xs font-bold">
           {alt.charAt(0).toUpperCase()}

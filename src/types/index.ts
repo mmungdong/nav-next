@@ -18,18 +18,24 @@ export interface ISiteConfig {
   search: { engines: ISearchEngine[] };
 }
 
+/** Some historical entries store tag objects instead of plain labels. */
+export interface ILegacyTag {
+  id?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
 export interface IWebsite {
   id: number;
   name: string;
   desc: string;
   url: string;
   icon?: string;
-  tags?: string[];
+  tags?: Array<string | ILegacyTag>;
   rate?: number; // 0-5
   top?: boolean;
-  ownVisible?: boolean;
   topTypes?: number[];
-  index?: number;
+  index?: number | null;
 }
 
 export interface ICategory {

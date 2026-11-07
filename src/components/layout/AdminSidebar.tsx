@@ -8,6 +8,8 @@ import { animationConfig } from '@/lib/animations';
 interface AdminSidebarProps {
   onLogout?: () => void;
   onBackHome?: () => void;
+  onNavigate?: () => void;
+  firstLinkRef?: React.MutableRefObject<HTMLAnchorElement | null>;
 }
 
 const menuItems = [
@@ -17,7 +19,7 @@ const menuItems = [
   { name: '系统信息', href: '/system/info' },
 ];
 
-export default function AdminSidebar({ onLogout, onBackHome }: AdminSidebarProps) {
+export default function AdminSidebar({ onLogout, onBackHome, onNavigate, firstLinkRef }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loadingHref, setLoadingHref] = useState<string | null>(null);
@@ -50,10 +52,11 @@ export default function AdminSidebar({ onLogout, onBackHome }: AdminSidebarProps
       return (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
         setLoadingHref(href);
+        onNavigate?.();
         router.push(href);
       };
     },
-    [router]
+    [router, onNavigate]
   );
 
   // Clear loading spinner when navigation completes
@@ -103,6 +106,7 @@ export default function AdminSidebar({ onLogout, onBackHome }: AdminSidebarProps
               >
                 <a
                   href={item.href}
+                  ref={item === menuItems[0] ? firstLinkRef : undefined}
                   onClick={handleMenuClick(item.href)}
                   className={`flex items-center px-5 py-3 text-sm rounded-lg transition-all duration-200 ease-in-out transform ${
                     isActive(item.href)

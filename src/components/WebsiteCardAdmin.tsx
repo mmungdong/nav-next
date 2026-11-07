@@ -17,7 +17,6 @@ export default function WebsiteCardAdmin({ website, categoryName, onEdit, onDele
       {/* 顶部标签 */}
       <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         {website.top && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">置顶</span>}
-        {website.ownVisible && <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">私有</span>}
       </div>
 
       <div className="flex items-start mb-3">
@@ -57,7 +56,7 @@ export default function WebsiteCardAdmin({ website, categoryName, onEdit, onDele
         </a>
 
         {/* 悬浮操作按钮 */}
-        <div className="flex space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        <div className="flex space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"

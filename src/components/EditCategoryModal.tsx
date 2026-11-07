@@ -23,18 +23,28 @@ export default function EditCategoryModal({
     icon: '',
     nav: [],
   });
+  const [initialSnapshot, setInitialSnapshot] = useState('');
 
   // 当弹窗打开或 category 属性变化时，重置表单
   useEffect(() => {
     if (isOpen) {
-      setFormData({
+      const next = {
         id: category?.id || Date.now(),
         title: category?.title || '',
         icon: category?.icon || '',
         nav: category?.nav || [],
-      });
+      };
+      setFormData(next);
+      setInitialSnapshot(JSON.stringify(next));
     }
   }, [isOpen, category]);
+
+  const requestClose = () => {
+    if (JSON.stringify(formData) !== initialSnapshot && !window.confirm('表单还有未保存的内容，确认放弃？')) {
+      return;
+    }
+    onClose();
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -57,7 +67,7 @@ export default function EditCategoryModal({
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
       <div
         className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm pointer-events-auto"
-        onClick={onClose}
+        onClick={requestClose}
       ></div>
       <div
         className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
@@ -68,7 +78,7 @@ export default function EditCategoryModal({
             {category ? '编辑分类' : '添加分类'}
           </h3>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
           >
             <svg
@@ -121,14 +131,14 @@ export default function EditCategoryModal({
           <div className="px-6 py-4 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm flex justify-end space-x-3 rounded-b-2xl">
             <button
               type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+              onClick={requestClose}
+              className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
             >
               取消
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+              className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-white bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
             >
               保存
             </button>

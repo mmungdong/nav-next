@@ -1,11 +1,13 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfigStore } from '@/stores/configStore';
 import SearchModal from '@/components/SearchModal';
 import FloatingControls from '@/components/FloatingControls';
+import TopBar from '@/components/home/TopBar';
 import { SearchProvider } from '@/components/SearchContext';
+import '@/components/home/home.css';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,17 +19,36 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { fetchConfig, siteConfig } = useConfigStore();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  // 初始化全局数据
+  // Single initialization point for the public site; pages read the stores.
   useEffect(() => {
     fetchCategories();
     fetchConfig();
     checkAuth();
   }, [fetchCategories, fetchConfig, checkAuth]);
 
-  // 全局快捷键 Cmd+K
+  // Re-validate the deployed JSON when the tab becomes active again. The stores
+  // throttle to one request per 60s and keep the cached copy on failure.
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState !== 'visible') return;
+      void fetchCategories();
+      void fetchConfig();
+    };
+    window.addEventListener('focus', revalidate);
+    window.addEventListener('online', revalidate);
+    document.addEventListener('visibilitychange', revalidate);
+    return () => {
+      window.removeEventListener('focus', revalidate);
+      window.removeEventListener('online', revalidate);
+      document.removeEventListener('visibilitychange', revalidate);
+    };
+  }, [fetchCategories, fetchConfig]);
+
+  // The home search field filters the page itself; the shortcut only opens the
+  // global modal so the two entries never fight over focus.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchModalOpen(true);
       }
@@ -50,24 +71,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
     }
   }, [siteConfig.site.name, siteConfig.site.description]);
 
+  const openSearch = useCallback(() => setIsSearchModalOpen(true), []);
+  const closeSearch = useCallback(() => setIsSearchModalOpen(false), []);
+
   return (
-    // Grid background
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 bg-grid-pattern text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100">
-      <SearchProvider openSearch={() => setIsSearchModalOpen(true)}>
-
-        {/* 内容容器 */}
-        <div className="w-full min-h-screen">
-          {children}
-        </div>
-
-        {/* 全局悬浮组件 */}
-        <FloatingControls onOpenSearch={() => setIsSearchModalOpen(true)} />
-
-        {/* 全局搜索模态框 */}
-        <SearchModal
-          isOpen={isSearchModalOpen}
-          onClose={() => setIsSearchModalOpen(false)}
-        />
+    <div className="nx-app">
+      <a className="nx-skip-link" href="#main">
+        跳到主要内容
+      </a>
+      <SearchProvider openSearch={openSearch}>
+        <TopBar />
+        {children}
+        <FloatingControls />
+        {isSearchModalOpen && <SearchModal isOpen onClose={closeSearch} />}
       </SearchProvider>
     </div>
   );

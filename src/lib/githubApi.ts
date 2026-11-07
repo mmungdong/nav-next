@@ -1,213 +1,238 @@
-import { owner, repo } from './config';
+import { owner as configOwner, repo as configRepo, branch as configBranch, dbPath } from './config';
+import { decodeBase64Utf8, encodeBase64Utf8 } from './codec';
+import { SyncErrorCode } from './syncTypes';
 
-// GitHub API 基础URL
 const GITHUB_API_BASE = 'https://api.github.com';
+const DEFAULT_TIMEOUT_MS = 20_000;
 
-// decode base64 content from GitHub API (UTF-8 safe)
-export function decodeContent(base64: string): string {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return new TextDecoder('utf-8').decode(bytes);
+export class GithubApiError extends Error {
+  code: SyncErrorCode;
+  httpStatus?: number;
+  details?: unknown;
+
+  constructor(code: SyncErrorCode, message: string, httpStatus?: number, details?: unknown) {
+    super(message);
+    this.name = 'GithubApiError';
+    this.code = code;
+    this.httpStatus = httpStatus;
+    this.details = details;
+  }
 }
 
-// 验证 GitHub Token 的有效性
-interface GitHubUser {
-  login: string;
+export interface GitHubUser {
   id: number;
-  node_id: string;
-  avatar_url: string;
-  gravatar_id: string;
-  url: string;
-  html_url: string;
-  followers_url: string;
-  following_url: string;
-  gists_url: string;
-  starred_url: string;
-  subscriptions_url: string;
-  organizations_url: string;
-  repos_url: string;
-  events_url: string;
-  received_events_url: string;
-  type: string;
-  site_admin: boolean;
+  login: string;
   name: string | null;
-  company: string | null;
-  blog: string | null;
-  location: string | null;
   email: string | null;
-  hireable: boolean | null;
-  bio: string | null;
-  twitter_username: string | null;
-  public_repos: number;
-  public_gists: number;
-  followers: number;
-  following: number;
-  created_at: string;
-  updated_at: string;
+  avatar_url: string;
+}
+
+export interface GitHubFile {
+  sha: string;
+  content: string;
+}
+
+const authHeaders = (token: string): Record<string, string> => ({
+  Authorization: `token ${token}`,
+  Accept: 'application/vnd.github+json',
+  'User-Agent': 'nav-next-app',
+});
+
+const contentsUrl = (owner: string, repo: string, path: string): string => {
+  const encodedPath = path
+    .split('/')
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join('/');
+  return `${GITHUB_API_BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+    repo
+  )}/contents/${encodedPath}`;
+};
+
+const readErrorMessage = async (response: Response): Promise<string> => {
+  try {
+    const data = (await response.json()) as { message?: unknown };
+    return typeof data.message === 'string' ? data.message : '';
+  } catch {
+    return '';
+  }
+};
+
+const classifyStatus = (status: number, message: string): SyncErrorCode => {
+  if (status === 401) return 'unauthorized';
+  if (status === 403) {
+    return /rate limit|secondary rate/i.test(message) ? 'rate_limited' : 'forbidden';
+  }
+  if (status === 404) return 'not_found';
+  if (status === 409) return 'conflict';
+  if (status === 429) return 'rate_limited';
+  if (status === 422) {
+    // "sha ... does not match" is a concurrent edit; branch protection is a
+    // permission problem; anything else is a rejected payload.
+    if (/sha.*(does not match|doesn't match|but expected)|not the latest/i.test(message)) {
+      return 'conflict';
+    }
+    if (/protected branch/i.test(message)) return 'forbidden';
+    return 'invalid_data';
+  }
+  if (status >= 500) return 'unknown_error';
+  return 'unknown_error';
+};
+
+const errorFromResponse = async (
+  response: Response,
+  action: string
+): Promise<GithubApiError> => {
+  const detail = await readErrorMessage(response);
+  const code = classifyStatus(response.status, detail);
+  const message = detail ? `${action}失败：${detail}` : `${action}失败 (HTTP ${response.status})`;
+  return new GithubApiError(code, message, response.status);
+};
+
+async function request(
+  url: string,
+  init: RequestInit,
+  action: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    const name = (error as { name?: string })?.name;
+    if (name === 'AbortError') {
+      throw new GithubApiError('timeout', `${action}超时（${timeoutMs / 1000}s）`);
+    }
+    throw new GithubApiError(
+      'network_error',
+      `${action}网络错误：${(error as Error)?.message ?? '连接失败'}`
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Browser-safe UTF-8 base64 decoding of the contents API payload. */
+export function decodeContent(base64: string): string {
+  return decodeBase64Utf8(base64);
 }
 
 export async function verifyGithubToken(
-  token: string
-): Promise<{
-  valid: boolean;
-  user?: GitHubUser;
-  message?: string;
-}> {
+  token: string,
+  options: {
+    owner?: string;
+    repo?: string;
+    branch?: string;
+    path?: string;
+  } = {}
+): Promise<{ valid: boolean; user?: GitHubUser; message?: string; code?: SyncErrorCode }> {
+  const expectedOwner = options.owner ?? configOwner;
+  const targetRepo = options.repo ?? configRepo;
+  const targetBranch = options.branch ?? configBranch;
+  const targetPath = options.path ?? dbPath;
+
+  let userResponse: Response;
   try {
-    const userResponse = await fetch(`${GITHUB_API_BASE}/user`, {
-      headers: {
-        Authorization: `token ${token}`,
-        'User-Agent': 'nav-next-app',
-      },
-    });
-
-    if (!userResponse.ok) {
-      if (userResponse.status === 401) {
-        return { valid: false, message: 'Token 无效或已过期' };
-      } else if (userResponse.status === 403) {
-        return { valid: false, message: 'Token 权限不足' };
-      } else {
-        return { valid: false, message: `验证失败 (${userResponse.status})` };
-      }
-    }
-
-    const userData = await userResponse.json();
-
-    if (userData.login !== owner) {
-      try {
-        const repoResponse = await fetch(
-          `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
-          {
-            headers: {
-              Authorization: `token ${token}`,
-              'User-Agent': 'nav-next-app',
-            },
-          }
-        );
-
-        if (!repoResponse.ok) {
-          if (repoResponse.status === 404) {
-            return { valid: false, message: '无法访问指定的私有仓库，请确认仓库名称和您的访问权限' };
-          } else if (repoResponse.status === 403) {
-            return { valid: false, message: 'Token权限不足，无法访问私有仓库。请确保Token具有完整的repo权限' };
-          } else {
-            return { valid: false, message: `仓库访问失败 (${repoResponse.status})` };
-          }
-        }
-      } catch (repoError) {
-        console.error('仓库访问检查失败:', repoError);
-        return { valid: false, message: '无法验证对私有仓库的访问权限' };
-      }
-    }
-
-    return { valid: true, user: userData };
+    userResponse = await request(
+      `${GITHUB_API_BASE}/user`,
+      { headers: authHeaders(token) },
+      '读取 GitHub 身份'
+    );
   } catch (error) {
-    console.error('GitHub Token 验证错误:', error);
-    return { valid: false, message: '网络错误，请稍后再试' };
+    return {
+      valid: false,
+      message: (error as Error).message,
+      code: (error as GithubApiError).code,
+    };
   }
+
+  if (!userResponse.ok) {
+    const detail = await readErrorMessage(userResponse);
+    if (userResponse.status === 401) {
+      return { valid: false, message: 'Token 无效或已过期', code: 'unauthorized' };
+    }
+    if (userResponse.status === 403) {
+      return {
+        valid: false,
+        message: 'Token 被拒绝或触发限流，请稍后重试',
+        code: classifyStatus(403, detail),
+      };
+    }
+    return {
+      valid: false,
+      message: detail || `验证失败 (HTTP ${userResponse.status})`,
+      code: classifyStatus(userResponse.status, detail),
+    };
+  }
+
+  const user = (await userResponse.json()) as GitHubUser;
+  // Public repositories are readable by any account; only the configured owner
+  // is treated as the site owner.
+  if (user.login.toLowerCase() !== expectedOwner.toLowerCase()) {
+    return {
+      valid: false,
+      code: 'forbidden',
+      message: `当前账号 ${user.login} 不是配置的仓库所有者 ${expectedOwner}`,
+    };
+  }
+
+  // Reading the actual target file proves repository/branch/file access, not
+  // just a valid token. It says nothing about write permission.
+  try {
+    await getFileContent(token, expectedOwner, targetRepo, targetPath, targetBranch);
+  } catch (error) {
+    const apiError = error as GithubApiError;
+    if (apiError.code === 'not_found') {
+      return {
+        valid: false,
+        code: 'not_found',
+        message: `账号匹配，但无法读取 ${targetBranch}:${targetPath}，请检查仓库/分支/文件配置`,
+      };
+    }
+    return { valid: false, code: apiError.code, message: apiError.message };
+  }
+
+  return { valid: true, user };
 }
 
-// 获取用户信息
-export async function getUserInfo(token: string) {
-  try {
-    const response = await fetch(`${GITHUB_API_BASE}/user`, {
-      headers: {
-        Authorization: `token ${token}`,
-        'User-Agent': 'nav-next-app',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('获取用户信息失败:', error);
-    throw error;
-  }
+export async function getUserInfo(token: string): Promise<GitHubUser> {
+  const response = await request(
+    `${GITHUB_API_BASE}/user`,
+    { headers: authHeaders(token) },
+    '获取用户信息'
+  );
+  if (!response.ok) throw await errorFromResponse(response, '获取用户信息');
+  return (await response.json()) as GitHubUser;
 }
 
-// 获取文件内容
 export async function getFileContent(
   token: string,
   owner: string,
   repo: string,
   path: string,
   branch: string
-) {
-  try {
-    const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
-      {
-        headers: {
-          Authorization: `token ${token}`,
-          'User-Agent': 'nav-next-app',
-        },
-      }
-    );
+): Promise<GitHubFile> {
+  const response = await request(
+    `${contentsUrl(owner, repo, path)}?ref=${encodeURIComponent(branch)}`,
+    { headers: authHeaders(token) },
+    '读取远程文件'
+  );
+  if (!response.ok) throw await errorFromResponse(response, '读取远程文件');
 
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-        console.log('GitHub API错误详情:', errorData); // 添加详细日志
-
-        // 特别处理404错误（文件不存在）
-        if (response.status === 404) {
-          // 返回特殊标识表示文件不存在
-          return { sha: null, content: null, notFound: true };
-        }
-
-        // 特别处理403错误（私有仓库访问问题）
-        if (response.status === 403) {
-          if (errorMessage.includes('Resource not accessible')) {
-            errorMessage =
-              '无法访问私有仓库资源，请检查Token权限和仓库访问权限';
-          } else {
-            errorMessage = `私有仓库访问权限不足: ${errorMessage}`;
-          }
-        }
-
-        // 特别处理404错误（仓库不存在或无访问权限）
-        if (response.status === 404) {
-          errorMessage =
-            '无法找到指定的仓库或文件，请检查仓库名称和您的访问权限';
-        }
-
-        // 特别处理422错误（验证错误，可能是分支保护规则）
-        if (response.status === 422) {
-          if (errorMessage.includes('protected branch')) {
-            errorMessage =
-              '分支受到保护，无法直接推送。请检查GitHub仓库的分支保护规则设置';
-          } else {
-            errorMessage = `验证错误: ${errorMessage}，可能是分支保护规则导致`;
-          }
-        }
-
-        // 特别处理400错误（请求参数错误）
-        if (response.status === 400) {
-          errorMessage = `请求参数错误: ${errorMessage}`;
-        }
-      } catch (parseError) {
-        // 如果无法解析错误响应，使用默认消息
-        console.warn('无法解析GitHub API错误响应:', parseError);
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('获取文件内容失败:', error);
-    throw error;
+  const data = (await response.json()) as {
+    sha?: unknown;
+    content?: unknown;
+    encoding?: unknown;
+  };
+  if (typeof data.sha !== 'string' || typeof data.content !== 'string') {
+    throw new GithubApiError('invalid_data', 'GitHub 返回的文件格式不正确');
   }
+  // Large-file responses omit content; an empty payload must never be treated
+  // as an empty document.
+  return { sha: data.sha, content: decodeBase64Utf8(data.content) };
 }
 
-// 更新文件内容
 export async function updateFileContent(
   token: string,
   owner: string,
@@ -217,112 +242,53 @@ export async function updateFileContent(
   message: string,
   branch: string,
   sha?: string
-) {
-  try {
-    // 将内容转换为base64编码
-    const encodedContent = Buffer.from(content).toString('base64');
-
-    // 构造请求体参数
-    const requestBody: {
-      message: string;
-      content: string;
-      branch: string;
-      sha?: string;
-    } = {
-      message,
-      content: encodedContent,
-      branch,
-    };
-
-    // 只有在sha存在时才添加到请求体中（更新现有文件）
-    // 如果sha不存在，则不添加（创建新文件）
-    if (sha) {
-      requestBody.sha = sha;
-    }
-
-    const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${token}`,
-          'User-Agent': 'nav-next-app',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      }
+): Promise<{ sha: string; commitSha?: string }> {
+  if (!sha) {
+    throw new GithubApiError(
+      'invalid_data',
+      '缺少远程基线 SHA，拒绝创建或覆盖文件'
     );
-
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-        console.log('GitHub API错误详情:', errorData); // 添加详细日志
-
-        // 特别处理403错误（私有仓库访问问题）
-        if (response.status === 403) {
-          if (errorMessage.includes('Resource not accessible')) {
-            errorMessage =
-              '无法访问私有仓库资源，请检查Token权限和仓库访问权限';
-          } else {
-            errorMessage = `私有仓库访问权限不足: ${errorMessage}`;
-          }
-        }
-
-        // 特别处理404错误（仓库或文件不存在）
-        if (response.status === 404) {
-          errorMessage =
-            '无法找到指定的仓库或文件，请检查仓库名称和您的访问权限';
-        }
-
-        // 特别处理422错误（验证错误，可能是分支保护规则）
-        if (response.status === 422) {
-          if (errorMessage.includes('protected branch')) {
-            errorMessage =
-              '分支受到保护，无法直接推送。请检查GitHub仓库的分支保护规则设置';
-          } else {
-            errorMessage = `验证错误: ${errorMessage}，可能是分支保护规则导致`;
-          }
-        }
-
-        // 特别处理400错误（请求参数错误）
-        if (response.status === 400) {
-          errorMessage = `请求参数错误: ${errorMessage}`;
-        }
-      } catch (parseError) {
-        // 如果无法解析错误响应，使用默认消息
-        console.warn('无法解析GitHub API错误响应:', parseError);
-      }
-
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('更新文件内容失败:', error);
-    throw error;
   }
+
+  const response = await request(
+    contentsUrl(owner, repo, path),
+    {
+      method: 'PUT',
+      headers: {
+        ...authHeaders(token),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        content: encodeBase64Utf8(content),
+        branch,
+        sha,
+      }),
+    },
+    '写入远程文件'
+  );
+  if (!response.ok) throw await errorFromResponse(response, '写入远程文件');
+
+  const data = (await response.json()) as {
+    content?: { sha?: unknown };
+    commit?: { sha?: unknown };
+  };
+  const newSha = data.content?.sha;
+  if (typeof newSha !== 'string') {
+    throw new GithubApiError('invalid_data', 'GitHub 未返回新文件 SHA');
+  }
+  return {
+    sha: newSha,
+    commitSha: typeof data.commit?.sha === 'string' ? data.commit.sha : undefined,
+  };
 }
 
-// 获取仓库信息
 export async function getRepoInfo(token: string, owner: string, repo: string) {
-  try {
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}`, {
-      headers: {
-        Authorization: `token ${token}`,
-        'User-Agent': 'nav-next-app',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('获取仓库信息失败:', error);
-    throw error;
-  }
+  const response = await request(
+    `${GITHUB_API_BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+    { headers: authHeaders(token) },
+    '获取仓库信息'
+  );
+  if (!response.ok) throw await errorFromResponse(response, '获取仓库信息');
+  return response.json();
 }

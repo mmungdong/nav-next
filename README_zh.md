@@ -129,11 +129,16 @@ npm run dev
 | 命令 | 说明 |
 | --- | --- |
 | `npm run dev` | 启动开发服务器 |
-| `npm run build` | 生产构建 |
+| `npm run build` | 生产构建（静态导出到 `out/`） |
 | `npm run start` | 启动生产服务器 |
 | `npm run lint` | ESLint 代码检查 |
 | `npm run lint:fix` | 自动修复 lint 问题 |
 | `npm run format` | Prettier 格式化 |
+| `npm run typecheck` | TypeScript 类型检查 |
+| `npm test` | 单元测试（node:test + tsx，无需额外运行时） |
+| `npm run validate:data` | 校验 `db.json` 与 `site-config.json` |
+| `npm run check:static` | 冒烟检查导出的 `out/` 产物 |
+| `npm run test:e2e` | Playwright 针对真实静态产物 `out/` 的浏览器测试（先运行 `npm run build`） |
 
 ---
 
@@ -150,29 +155,34 @@ npm run dev
 
 > 部署前请确保 `npm run build` 成功并生成 `out` 目录。
 
+**刷新边界：** 后台保存只会提交到 GitHub。首页读取的是已部署的
+`/data/db.json` 与 `/data/site-config.json`，因此新数据要在托管平台重新构建/发布后
+才会出现。若未配置推送自动发布，需要手动重新部署；后台提示“GitHub 已更新，首页需
+等待部署”就是这个含义。前端会在加载时、标签页重新可见时以及点击“刷新数据”时用
+`cache: no-cache` 重新验证，但托管平台前的 CDN 仍可能延迟更新。
+
 ---
 
 ## 数据同步
 
-项目通过 GitHub API 实现数据的远程存储与同步，无需自建后端。
+GitHub 保存远程数据，浏览器不会在后台偷偷同步。
 
-```
-本地 db.json  ──┐
-                 ├──▶ Diff 对比  ──▶ 可视化提交  ──▶ GitHub 仓库
-localStorage  ──┘
-```
+- 两个远程文件相互独立：`public/data/db.json`（网站）与
+  `public/data/site-config.json`（站点与搜索设置）。
+- 后台编辑先保存为本机草稿，草稿 key 包含仓库、分支、路径、GitHub 账号和标签页；
+  刷新或重新打开后可恢复，推送前始终只在本机。
+- 推送使用读取时捕获的 base SHA。如果另一台设备期间已提交，推送会被拒绝并保留本机
+  草稿，绝不静默覆盖。此时可选择采用远程、保留草稿，或在二次确认后显式覆盖。
+- 推送期间继续编辑，新修改会基于返回的新 SHA 继续标记为待推送，不会被误清。
+- “导出草稿 / 导入恢复草稿”以 JSON 迁移草稿，导出文件不包含 Token。
+- 公开首页只读取已部署的 JSON，既不读后台草稿，也不携带 GitHub Token。
 
-### 配置步骤
+### 测试
 
-1. 在 GitHub 创建 Personal Access Token（需 `repo` 权限）
-2. 进入后台 **系统设置** 录入 Token 与仓库信息
-3. 使用 **数据同步** 功能进行本地与远程的 Diff 对比与提交
-
-数据流说明：
-
-- 首次加载从 `public/data/db.json` 读取
-- localStorage 缓存 1 小时，减少重复请求
-- 后台同步时对比本地与远程，可视化展示新增 / 删除 / 修改
+`npm test` 使用 Node 自带测试运行器执行 store、校验与同步单测。
+`npm run test:e2e` 用 Playwright 测试真实静态产物 `out/`，GitHub API 由 mock 提供，
+不会写入真实仓库。首次需执行 `npx playwright install chromium` 安装浏览器。E2E 目前
+仅在 macOS 执行，未在 Windows 验证。
 
 ---
 

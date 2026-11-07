@@ -129,11 +129,16 @@ Open [http://localhost:3000](http://localhost:3000) to see the result.
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
+| `npm run build` | Production build (static export to `out/`) |
 | `npm run start` | Start the production server |
 | `npm run lint` | Run ESLint |
 | `npm run lint:fix` | Auto-fix lint issues |
 | `npm run format` | Format with Prettier |
+| `npm run typecheck` | TypeScript check without emitting |
+| `npm test` | Unit tests (node:test + tsx, no extra runtime) |
+| `npm run validate:data` | Validate `db.json` and `site-config.json` |
+| `npm run check:static` | Smoke-check the exported `out/` artifact |
+| `npm run test:e2e` | Playwright against the exported `out/` build (run `npm run build` first) |
 
 ---
 
@@ -150,29 +155,41 @@ Thanks to the static output, this project can be deployed on any static hosting 
 
 > Ensure `npm run build` succeeds and the `out` directory is generated before deploying.
 
+**Refresh boundary:** saving in the admin only commits to GitHub. The public site
+reads the deployed `/data/db.json` and `/data/site-config.json`, so new content
+appears after the host rebuilds/redeploys. If the project is not wired to auto-
+deploy on push, redeploy manually; the admin message says "GitHub 已更新，首页
+需等待部署" for exactly this reason. The front end revalidates with
+`cache: no-cache` on load, on tab focus and via the refresh button, but a CDN
+cache in front of the host can still delay the update.
+
 ---
 
 ## Data Sync
 
-The project uses the GitHub API for remote storage and sync — no self-hosted backend needed.
+GitHub holds the remote data; the browser never syncs behind your back.
 
-```
-local db.json  ──┐
-                  ├──▶ diff  ──▶ visual commit  ──▶ GitHub repo
-localStorage    ──┘
-```
+- Two remote files are independent resources: `public/data/db.json` (sites) and
+  `public/data/site-config.json` (site/search settings).
+- Admin edits are stored as a local draft keyed by repository + branch + path +
+  GitHub account + tab. Drafts survive reloads and stay local until you push.
+- Pushing sends the captured base SHA. If another device committed in the
+  meantime the push is rejected and the local draft is kept — never silently
+  overwritten. You can adopt the remote, keep the draft, or explicitly overwrite
+  with a second confirmation.
+- Edits made while a push is in flight stay dirty against the newly returned
+  baseline instead of being cleared.
+- `导出草稿` / `导入恢复草稿` move drafts as JSON without ever including the token.
+- The public site reads only the deployed JSON and never the admin draft or the
+  GitHub token.
 
-### Setup
+### Testing
 
-1. Create a GitHub Personal Access Token (requires `repo` scope)
-2. In the admin dashboard, go to **Settings** and enter the token + repo info
-3. Use the **Data Sync** feature to diff and commit local vs. remote
-
-Data flow:
-
-- On first load, data is read from `public/data/db.json`
-- localStorage caches for 1 hour to reduce repeated requests
-- On sync, the admin compares local vs. remote and visualizes added / removed / modified entries
+`npm test` runs the store/validation/sync unit tests with Node's test runner.
+`npm run test:e2e` runs Playwright against the real static `out/` build; the
+GitHub API is mocked, so no real repository is written. Install the browser once
+with `npx playwright install chromium`. The e2e suite has been executed on
+macOS only; it is not verified on Windows.
 
 ---
 

@@ -7,7 +7,7 @@ import { ISearchEngine } from '@/types';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 
 export default function SearchManagementPage() {
-  const { siteConfig, saveConfig, pushToRemote, dirty } = useConfigStore();
+  const { siteConfig, saveConfig, pushToRemote, dirty, conflict } = useConfigStore();
   const { githubToken } = useAuthStore();
   const engines = siteConfig.search.engines;
 
@@ -23,7 +23,10 @@ export default function SearchManagementPage() {
   };
 
   const writeEngines = (next: ISearchEngine[]) => {
-    saveConfig({ ...siteConfig, search: { engines: next } });
+    const saved = saveConfig({ ...siteConfig, search: { engines: next } });
+    if (!saved) {
+      flash('error', '本机保存失败，改动仅在当前页面内');
+    }
   };
 
   const handleAdd = () => {
@@ -67,9 +70,14 @@ export default function SearchManagementPage() {
   const handleSaveAll = async () => {
     if (!githubToken) return flash('error', '未配置 GitHub Token');
     setSaving(true);
-    const ok = await pushToRemote(githubToken);
+    const result = await pushToRemote(githubToken);
     setSaving(false);
-    flash(ok ? 'success' : 'error', ok ? '已保存并推送' : '推送失败，请重试');
+    flash(
+      result.status === 'success' ? 'success' : 'error',
+      result.status === 'success'
+        ? 'GitHub 已更新；首页需等待部署后才会显示'
+        : result.message
+    );
   };
 
   return (
@@ -77,12 +85,16 @@ export default function SearchManagementPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">搜索管理</h1>
         <div className="flex items-center gap-3">
-          <span className={`text-sm ${dirty ? 'text-amber-600' : 'text-gray-400'}`}>
-            {dirty ? '● 有未保存的改动' : '○ 已同步'}
+          <span
+            className={`text-sm ${
+              conflict ? 'text-red-600' : dirty ? 'text-amber-600' : 'text-gray-400'
+            }`}
+          >
+            {conflict ? '● 存在冲突，推送已锁定' : dirty ? '● 已保存到本机，尚未推送' : '○ 未修改 / 已同步'}
           </span>
           <button
             onClick={handleSaveAll}
-            disabled={!dirty || saving}
+            disabled={!dirty || saving || Boolean(conflict)}
             className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors"
           >
             {saving ? '保存中…' : '保存并推送'}
@@ -108,6 +120,7 @@ export default function SearchManagementPage() {
             暂无搜索引擎，点击添加按钮创建
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -136,6 +149,7 @@ export default function SearchManagementPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

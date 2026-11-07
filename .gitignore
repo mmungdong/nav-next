@@ -42,3 +42,8 @@ next-env.d.ts
 
 docs/
 .superpowers/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/

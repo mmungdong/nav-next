@@ -12,7 +12,7 @@ export default function InfoManagementPage() {
   const stats = useMemo(() => {
     const totalWebsites = categories.reduce((sum, c) => sum + c.nav.length, 0);
     const totalCategories = categories.length;
-    const tagSet = new Set<string>();
+    const tagSet = new Set<unknown>();
     categories.forEach((c) => c.nav.forEach((w) => (w.tags ?? []).forEach((t) => tagSet.add(t))));
     return { totalWebsites, totalCategories, totalTags: tagSet.size };
   }, [categories]);

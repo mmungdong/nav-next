@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import OptimizedImage from '@/components/OptimizedImage';
-import { ICategory, IWebsite } from '@/types';
+import { ICategory } from '@/types';
 
 interface WebsiteSortModalProps {
   category: ICategory;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (categoryId: number, sortedWebsites: IWebsite[]) => void;
+  onSave: (categoryId: number, orderedIds: number[]) => void;
 }
 
 export default function WebsiteSortModal({
@@ -17,14 +17,38 @@ export default function WebsiteSortModal({
   onClose,
   onSave,
 }: WebsiteSortModalProps) {
-  const [sortedWebsites, setSortedWebsites] = useState<IWebsite[]>(() => [
-    ...category.nav,
-  ]);
+  const [orderedIds, setOrderedIds] = useState<number[]>([]);
+  const [stale, setStale] = useState(false);
+  const snapshotRef = useRef('');
 
-  const handleDragStart = (
-    e: React.DragEvent<HTMLDivElement>,
-    index: number
-  ) => {
+  const reload = () => {
+    const ids = category.nav.map((website) => website.id);
+    setOrderedIds(ids);
+    snapshotRef.current = ids.join(',');
+    setStale(false);
+  };
+
+  // Each open starts from the current list; only the ID order is submitted, so
+  // fields edited elsewhere are never reverted to this dialog's snapshot.
+  useEffect(() => {
+    if (!isOpen) return;
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !snapshotRef.current) return;
+    if (category.nav.map((website) => website.id).join(',') !== snapshotRef.current) {
+      setStale(true);
+    }
+  }, [category, isOpen]);
+
+  const websiteMap = new Map(category.nav.map((website) => [website.id, website]));
+  const orderedWebsites = orderedIds
+    .map((id) => websiteMap.get(id))
+    .filter((website): website is NonNullable<typeof website> => Boolean(website));
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     e.dataTransfer.setData('dragIndex', index.toString());
   };
 
@@ -32,25 +56,23 @@ export default function WebsiteSortModal({
     e.preventDefault();
   };
 
-  const handleDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    dropIndex: number
-  ) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
     e.preventDefault();
-    const dragIndex = parseInt(e.dataTransfer.getData('dragIndex'));
+    const dragIndex = parseInt(e.dataTransfer.getData('dragIndex'), 10);
+    if (Number.isNaN(dragIndex) || dragIndex === dropIndex) return;
 
-    if (dragIndex === dropIndex) return;
-
-    const newWebsites = [...sortedWebsites];
-    const [draggedItem] = newWebsites.splice(dragIndex, 1);
-    newWebsites.splice(dropIndex, 0, draggedItem);
-
-    setSortedWebsites(newWebsites);
+    setOrderedIds((prev) => {
+      const next = [...prev];
+      const [dragged] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, dragged);
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(category.id, sortedWebsites);
+    if (stale) return;
+    onSave(category.id, orderedIds);
   };
 
   if (!isOpen) return null;
@@ -60,9 +82,12 @@ export default function WebsiteSortModal({
       <div
         className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm pointer-events-auto"
         onClick={onClose}
-      ></div>
+      />
       <div
-        className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-white/30 dark:border-gray-700/50 pointer-events-auto custom-scrollbar"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`网站排序 - ${category.title}`}
+        className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90dvh] overflow-y-auto border border-white/30 dark:border-gray-700/50 pointer-events-auto custom-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-between items-center">
@@ -71,32 +96,28 @@ export default function WebsiteSortModal({
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            className="min-w-[44px] min-h-[44px] text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            aria-label="关闭"
           >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4">
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              拖拽网站来调整显示顺序
-            </p>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">拖拽网站来调整显示顺序</p>
+
+            {stale && (
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-3 text-sm text-amber-800 dark:text-amber-200">
+                <span>分类内网站已在别处新增或删除，请重新载入后再保存。</span>
+                <button type="button" onClick={reload} className="underline font-medium">
+                  重新载入
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
-              {sortedWebsites.map((website, index) => (
+              {orderedWebsites.map((website, index) => (
                 <div
                   key={website.id}
                   draggable
@@ -107,18 +128,8 @@ export default function WebsiteSortModal({
                 >
                   <div className="flex items-center w-full">
                     <div className="flex-shrink-0 mr-3 cursor-move">
-                      <svg
-                        className="h-5 w-5 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 8h16M4 16h16"
-                        />
+                      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                       </svg>
                     </div>
                     <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
@@ -153,13 +164,14 @@ export default function WebsiteSortModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+              className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
             >
               取消
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+              disabled={stale}
+              className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-white bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700/90 disabled:opacity-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
             >
               保存
             </button>
