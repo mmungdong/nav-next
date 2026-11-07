@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  countAllSites,
   countMatchedSites,
   filterCategories,
   isValidSiteUrl,
@@ -9,7 +10,7 @@ import {
   sortForDisplay,
 } from '@/lib/siteSearch';
 import { moveSelection, nextSelection, previousSelection } from '@/lib/searchNavigation';
-import { ICategory } from '@/types';
+import type { ICategory } from '@/types';
 
 const categories: ICategory[] = [
   {
@@ -51,10 +52,35 @@ test('site name, description, URL and domain are all searchable', () => {
   assert.equal(filterCategories(categories, 'EXAMPLE').length, 1);
 });
 
+test('queries are trimmed and case-insensitive', () => {
+  const byName = filterCategories(categories, '  GITHUB  ');
+  assert.equal(byName.length, 1);
+  assert.deepEqual(
+    byName[0].sites.map((site) => site.name),
+    ['GitHub']
+  );
+});
+
+test('a site-only hit lists just the matching sites', () => {
+  const matches = filterCategories(categories, 'figma');
+  assert.equal(matches.length, 1);
+  assert.deepEqual(
+    matches[0].sites.map((site) => site.name),
+    ['Figma']
+  );
+});
+
 test('empty query returns all categories with all sites', () => {
   const matches = filterCategories(categories, '   ');
   assert.equal(matches.length, 2);
   assert.equal(countMatchedSites(matches), 4);
+  assert.equal(countAllSites(categories), 4);
+});
+
+test('no match returns an empty list and zero count', () => {
+  const matches = filterCategories(categories, '绝对不存在的关键词');
+  assert.deepEqual(matches, []);
+  assert.equal(countMatchedSites(matches), 0);
 });
 
 test('invalid site URLs are rejected and never thrown from rendering helpers', () => {
@@ -63,13 +89,27 @@ test('invalid site URLs are rejected and never thrown from rendering helpers', (
   assert.equal(isValidSiteUrl(undefined), false);
   assert.equal(siteDomain('not a url'), 'not a url');
   assert.equal(siteDomain('https://www.example.com/path'), 'example.com');
+
+  const malformed: ICategory[] = [
+    { id: 9, title: '坏数据', nav: [{ id: 90, name: 'Bad', desc: '', url: 'not-a-url' }] },
+  ];
+  const matches = filterCategories(malformed, 'bad');
+  assert.equal(matches[0].sites.length, 1);
+  assert.equal(matches[0].sites[0].desc, '');
 });
 
 test('top sites render first inside their category without changing stored order', () => {
   const sites = categories[0].nav;
   const display = sortForDisplay(sites);
-  assert.deepEqual(display.map((site) => site.id), [2, 1]);
-  assert.deepEqual(sites.map((site) => site.id), [1, 2], 'source order untouched');
+  assert.deepEqual(
+    display.map((site) => site.id),
+    [2, 1]
+  );
+  assert.deepEqual(
+    sites.map((site) => site.id),
+    [1, 2],
+    'source order untouched'
+  );
 });
 
 test('keyboard selection starts at the first/last item and wraps', () => {

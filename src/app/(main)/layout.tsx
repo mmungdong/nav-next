@@ -1,11 +1,7 @@
-import type { Metadata } from 'next';
 import MainLayout from '@/layouts/MainLayout';
 
-export const metadata: Metadata = {
-  title: 'Guidebook',
-  description: 'Brookside Guidebook',
-};
-
+// The document title / description come from useConfigStore at runtime so the
+// admin-editable site name wins over any build-time metadata.
 export default function MainRootLayout({
   children,
 }: Readonly<{

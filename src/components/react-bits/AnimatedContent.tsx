@@ -28,6 +28,7 @@ if (typeof window !== 'undefined') {
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 const WIPES = {
+  none: '',
   up: 'linear-gradient(to top, #000 calc(var(--ac-wipe) * 140% - 40%), transparent calc(var(--ac-wipe) * 140%))',
   down: 'linear-gradient(to bottom, #000 calc(var(--ac-wipe) * 140% - 40%), transparent calc(var(--ac-wipe) * 140%))',
   left: 'linear-gradient(to left, #000 calc(var(--ac-wipe) * 140% - 40%), transparent calc(var(--ac-wipe) * 140%))',
@@ -105,7 +106,10 @@ const AnimatedContent = ({
 }: AnimatedContentProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const callbacksRef = useRef({ onStart, onComplete, onDisappearanceComplete });
-  callbacksRef.current = { onStart, onComplete, onDisappearanceComplete };
+
+  useIsomorphicLayoutEffect(() => {
+    callbacksRef.current = { onStart, onComplete, onDisappearanceComplete };
+  });
 
   useIsomorphicLayoutEffect(() => {
     const el = ref.current;
@@ -123,7 +127,7 @@ const AnimatedContent = ({
       const horizontal = direction === 'horizontal';
       const axis = horizontal ? 'x' : 'y';
       const sign = reverse ? -1 : 1;
-      const mask = wipe === 'none' ? null : WIPES[wipe];
+      const mask = WIPES[wipe];
 
       gsap.set(el, { visibility: 'visible' });
 

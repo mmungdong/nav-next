@@ -8,6 +8,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useNavStore } from '@/stores/navStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useIsMac } from '@/hooks/useIsMac';
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
 import { useScrollSpy } from '@/hooks/useScrollSpy';
 import {
@@ -30,7 +31,6 @@ export default function Home() {
   const { categories, loading, fetchCategories } = useNavStore();
   const [rawQuery, setRawQuery] = useState('');
   const query = useDebounce(rawQuery, 200);
-  const [isMac, setIsMac] = useState(true);
   const composingRef = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const pillWrapRef = useRef<HTMLDivElement>(null);
@@ -52,11 +52,8 @@ export default function Home() {
   const { activeId, scrollToSection } = useScrollSpy(sectionIds, isCompact ? 128 : 92);
   const effectiveActive = resolveActiveId(activeId, sectionIds);
   const activeIndex = sectionIds.indexOf(effectiveActive);
+  const isMac = useIsMac();
   const shortcut = isMac ? '⌘ K' : 'Ctrl K';
-
-  useEffect(() => {
-    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent));
-  }, []);
 
   // Category DOM nodes change with the filtered set; let ScrollTrigger recompute.
   useEffect(() => {

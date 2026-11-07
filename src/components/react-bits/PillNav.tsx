@@ -13,7 +13,6 @@
  */
 
 import {
-  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -281,7 +280,10 @@ const PillNav = ({
     stretch: clamp(stretch, 0, 1),
   };
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  });
 
   const palette = THEMES[theme] ?? THEMES.dark;
   const vars: Record<string, string> = { ...palette, ...(SIZES[size] ?? SIZES.md) };
@@ -684,7 +686,9 @@ const PillNav = ({
   }, [collapsed, joined]);
 
   useEffect(() => {
-    if (!collapsed && open) setOpen(false);
+    if (collapsed || !open) return undefined;
+    const frame = requestAnimationFrame(() => setOpen(false));
+    return () => cancelAnimationFrame(frame);
   }, [collapsed, open]);
 
   useIsomorphicLayoutEffect(() => {
@@ -717,8 +721,8 @@ const PillNav = ({
       });
     } else {
       if (reduce) {
-        setPanelShown(false);
-        return undefined;
+        const frame = requestAnimationFrame(() => setPanelShown(false));
+        return () => cancelAnimationFrame(frame);
       }
       const morph = panel.animate([{ clipPath: end }, { clipPath: start }], {
         duration: 380,
@@ -843,10 +847,14 @@ const PillNav = ({
     >
       {logo && (
         <span ref={logoRef} className={[LOGO, joined ? '' : SURFACE].filter(Boolean).join(' ')}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <a href={logoHref} className={LOGO_LINK} aria-label={logoAlt} onPointerEnter={spin}>
             <span ref={markRef} className={MARK}>
-              {typeof logo === 'string' ? <img src={logo} alt="" draggable={false} /> : logo}
+              {typeof logo === 'string' ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logo} alt="" draggable={false} />
+              ) : (
+                logo
+              )}
             </span>
           </a>
           {!joined && <span className={RIM} />}

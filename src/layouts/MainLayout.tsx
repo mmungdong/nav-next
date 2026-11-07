@@ -57,9 +57,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // apply site name / description from config
+  // Next re-applies its static metadata title once hydration finishes, so keep
+  // the configured title in sync until the layout unmounts.
   useEffect(() => {
-    document.title = siteConfig.site.name;
+    const title = siteConfig.site.name;
+    const applyTitle = () => {
+      if (document.title !== title) document.title = title;
+    };
+    applyTitle();
+    const observer = new MutationObserver(applyTitle);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [siteConfig.site.name]);
+
+  useEffect(() => {
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', siteConfig.site.description);
@@ -69,7 +80,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       m.content = siteConfig.site.description;
       document.head.appendChild(m);
     }
-  }, [siteConfig.site.name, siteConfig.site.description]);
+  }, [siteConfig.site.description]);
 
   const openSearch = useCallback(() => setIsSearchModalOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchModalOpen(false), []);

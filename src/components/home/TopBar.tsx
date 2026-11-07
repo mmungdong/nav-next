@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfigStore } from '@/stores/configStore';
@@ -23,12 +23,16 @@ export default function TopBar() {
   const { isAuthenticated } = useAuthStore();
   const { resolvedTheme, setTheme } = useTheme();
   const { openSearch } = useSearch();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [today, setToday] = useState('');
 
   useEffect(() => {
-    setMounted(true);
-    setToday(formatToday());
+    const frame = requestAnimationFrame(() => setToday(formatToday()));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   // Keep the server and first client render identical; next-themes resolves the

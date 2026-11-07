@@ -10,16 +10,14 @@ export const useScrollSpy = (ids: string[], offset: number = 100) => {
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
-    // Drop ids that disappeared after a search / data reload.
-    setActiveId((prev) => resolveActiveId(prev, ids));
-
     const update = () => {
       if (performance.now() < clickLockUntil.current) return;
       const sections = ids
         .map((id) => {
           const element = document.getElementById(id);
           if (!element) return null;
-          return { id, top: element.getBoundingClientRect().top + window.scrollY };
+          // viewport-relative top: the offset line is measured from the viewport
+          return { id, top: element.getBoundingClientRect().top };
         })
         .filter((section): section is { id: string; top: number } => section !== null);
 
@@ -39,11 +37,12 @@ export const useScrollSpy = (ids: string[], offset: number = 100) => {
 
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
-    update();
+    const initial = requestAnimationFrame(update);
 
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
+      cancelAnimationFrame(initial);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
     };
@@ -66,5 +65,7 @@ export const useScrollSpy = (ids: string[], offset: number = 100) => {
     [offset]
   );
 
-  return { activeId, scrollToSection };
+  // Derive a valid id during render so a filtered-out section never lingers in
+  // the navigation before the next scroll event arrives.
+  return { activeId: resolveActiveId(activeId, ids), scrollToSection };
 };

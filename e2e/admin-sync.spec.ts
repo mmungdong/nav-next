@@ -183,7 +183,7 @@ test.describe('admin sync against the exported static build', () => {
     await page.getByRole('button', { name: '保存并离开' }).click();
 
     await expect(page.getByText(/未完全成功：站点配置/)).toBeVisible();
-    await expect(page).toHaveURL(/\/system\/setting$/);
+    await expect(page).toHaveURL(/\/system\/setting\/?$/);
     expect(firstName(state)).toBe('部分成功-网站');
     const config = state.read<{ site: { name: string } }>(CONFIG_PATH);
     expect(config.site.name).not.toBe('部分成功-配置');
