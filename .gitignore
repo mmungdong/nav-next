@@ -40,5 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-docs/
+docs/*
+!docs/homepage-wiring-acceptance.md
 .superpowers/

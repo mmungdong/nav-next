@@ -1,11 +1,13 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfigStore } from '@/stores/configStore';
 import SearchModal from '@/components/SearchModal';
 import FloatingControls from '@/components/FloatingControls';
+import TopBar from '@/components/home/TopBar';
 import { SearchProvider } from '@/components/SearchContext';
+import '@/components/home/home.css';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,17 +19,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { fetchConfig, siteConfig } = useConfigStore();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  // 初始化全局数据
+  // Single initialization point for the public site; pages read the stores.
   useEffect(() => {
     fetchCategories();
     fetchConfig();
     checkAuth();
   }, [fetchCategories, fetchConfig, checkAuth]);
 
-  // 全局快捷键 Cmd+K
+  // The home search field filters the page itself; the shortcut only opens the
+  // global modal so the two entries never fight over focus.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchModalOpen(true);
       }
@@ -36,9 +39,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // apply site name / description from config
+  // Next re-applies its static metadata title once hydration finishes, so keep
+  // the configured title in sync until the layout unmounts.
   useEffect(() => {
-    document.title = siteConfig.site.name;
+    const title = siteConfig.site.name;
+    const applyTitle = () => {
+      if (document.title !== title) document.title = title;
+    };
+    applyTitle();
+    const observer = new MutationObserver(applyTitle);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [siteConfig.site.name]);
+
+  useEffect(() => {
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', siteConfig.site.description);
@@ -48,26 +62,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
       m.content = siteConfig.site.description;
       document.head.appendChild(m);
     }
-  }, [siteConfig.site.name, siteConfig.site.description]);
+  }, [siteConfig.site.description]);
+
+  const openSearch = useCallback(() => setIsSearchModalOpen(true), []);
+  const closeSearch = useCallback(() => setIsSearchModalOpen(false), []);
 
   return (
-    // Grid background
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 bg-grid-pattern text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100">
-      <SearchProvider openSearch={() => setIsSearchModalOpen(true)}>
-
-        {/* 内容容器 */}
-        <div className="w-full min-h-screen">
-          {children}
-        </div>
-
-        {/* 全局悬浮组件 */}
-        <FloatingControls onOpenSearch={() => setIsSearchModalOpen(true)} />
-
-        {/* 全局搜索模态框 */}
-        <SearchModal
-          isOpen={isSearchModalOpen}
-          onClose={() => setIsSearchModalOpen(false)}
-        />
+    <div className="nx-app">
+      <a className="nx-skip-link" href="#main">
+        跳到主要内容
+      </a>
+      <SearchProvider openSearch={openSearch}>
+        <TopBar />
+        {children}
+        <FloatingControls />
+        <SearchModal isOpen={isSearchModalOpen} onClose={closeSearch} />
       </SearchProvider>
     </div>
   );

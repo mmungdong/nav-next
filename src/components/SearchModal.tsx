@@ -1,241 +1,245 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search as SearchIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import SiteSearchResults from './SiteSearchResults';
 import OptimizedImage from '@/components/OptimizedImage';
-import { animationConfig } from '@/lib/animations';
 import { useConfigStore } from '@/stores/configStore';
+import { safeHostname } from '@/lib/utils';
+import { isValidSiteUrl } from '@/lib/siteSearch';
 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface Engine {
+  id: string;
+  name: string;
+  url: string;
+  internal: boolean;
+}
+
 const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEngine, setSelectedEngine] = useState('internal');
+  const [engineId, setEngineId] = useState('internal');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const { siteConfig } = useConfigStore();
-  const searchEngines = useMemo(() => {
-    return [
-      { id: 'internal', name: '站内', icon: '', url: '', isInternal: true },
-      ...siteConfig.search.engines.map((e) => ({ id: e.id, name: e.name, icon: e.icon, url: e.url, isInternal: false })),
-    ];
-  }, [siteConfig.search.engines]);
+  const engines = useMemo<Engine[]>(
+    () => [
+      { id: 'internal', name: '站内', url: '', internal: true },
+      ...siteConfig.search.engines.map((engine) => ({
+        id: engine.id,
+        name: engine.name,
+        url: engine.url,
+        internal: false,
+      })),
+    ],
+    [siteConfig.search.engines]
+  );
+  const activeEngine = engines.find((engine) => engine.id === engineId) ?? engines[0];
 
-  // 处理搜索
-  const handleSearch = (engineId: string) => {
-    const engine = searchEngines.find((e) => e.id === engineId);
-    if (engine && searchQuery.trim()) {
-      if (engine.isInternal) {
-        // 站内搜索
-        window.location.href = `${engine.url}${encodeURIComponent(searchQuery)}`;
-      } else {
-        // 外部搜索
-        window.open(
-          `${engine.url}${encodeURIComponent(searchQuery)}`,
-          '_blank'
-        );
-      }
-    }
-  };
-
-  // 键盘事件处理 + 焦点陷阱
+  // Focus + scroll lock + focus return. No animation gate: the dialog is usable
+  // immediately, including with reduced motion.
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    if (isOpen) {
-      previousActiveRef.current = document.activeElement as HTMLElement;
-      document.addEventListener('keydown', handleKeyDown);
-      // 阻止背景滚动
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return undefined;
+    previousActiveRef.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+    const frame = requestAnimationFrame(() => searchInputRef.current?.focus());
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      // 恢复背景滚动
+      cancelAnimationFrame(frame);
       document.body.style.overflow = '';
-      // 焦点归还到触发元素
-      if (previousActiveRef.current) {
-        previousActiveRef.current.focus?.();
+      const previous = previousActiveRef.current;
+      if (previous && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
-  }, [isOpen, onClose]);
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const runExternalSearch = () => {
+    const keyword = searchQuery.trim();
+    if (!keyword || activeEngine.internal) return;
+    if (!isValidSiteUrl(activeEngine.url)) return;
+    window.open(
+      `${activeEngine.url}${encodeURIComponent(keyword)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* 背景遮罩 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{
-              opacity: {
-                duration:
-                  animationConfig.modal.backdrop.enter.opacity.duration / 1000,
-                ease: animationConfig.modal.backdrop.enter.opacity.ease,
-              },
+    <>
+      <div className="nx-modal-backdrop" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={dialogRef}
+        className="nx-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="搜索"
+      >
+        <div className="nx-modal-head">
+          <span className="nx-modal-search-icon" aria-hidden="true">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
+          </span>
+          <label className="nx-sr-only" htmlFor="global-search-input">
+            搜索关键词
+          </label>
+          <input
+            ref={searchInputRef}
+            id="global-search-input"
+            className="nx-modal-input"
+            type="text"
+            value={searchQuery}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={
+              activeEngine.internal
+                ? '输入关键词筛选站内站点…'
+                : `用 ${activeEngine.name} 搜索…`
+            }
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              // Internal search is live filtering; never navigate to a relative URL.
+              if (!activeEngine.internal) runExternalSearch();
             }}
-            onClick={onClose}
-            className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-sm z-40"
-            style={{ willChange: 'opacity' }}
           />
-
-          {/* Modal内容 */}
-          <motion.div
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="搜索"
-            onAnimationComplete={() => {
-              if (isOpen) searchInputRef.current?.focus();
-            }}
-            initial={animationConfig.modal.content.enter.initial}
-            animate={animationConfig.modal.content.enter.animate}
-            exit={animationConfig.modal.content.exit.animate}
-            transition={{
-              opacity: {
-                duration:
-                  animationConfig.modal.content.enter.opacity.duration / 1000,
-                ease: animationConfig.modal.content.enter.opacity.ease,
-              },
-              scale: {
-                duration:
-                  animationConfig.modal.content.enter.scale.duration / 1000,
-                ease: animationConfig.modal.content.enter.scale.ease,
-              },
-              y: {
-                duration: animationConfig.modal.content.enter.y.duration / 1000,
-                ease: animationConfig.modal.content.enter.y.ease,
-              },
-            }}
-            className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl"
-            style={{ willChange: 'transform, opacity' }}
+          <button
+            type="button"
+            className="nx-modal-close"
+            aria-label="关闭搜索"
+            onClick={onClose}
           >
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl overflow-visible border border-white/30 dark:border-gray-700/50 relative z-50">
-              {/* 搜索框 */}
-              <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                <div className="relative">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch(selectedEngine);
-                      }
-                    }}
-                    placeholder="输入搜索关键词..."
-                    className="w-full px-4 py-3 pl-12 bg-white/50 dark:bg-gray-700/50 backdrop-blur-xl border border-white/30 dark:border-gray-600/30 rounded-xl focus-ring dark:text-white transition-all placeholder-gray-400 dark:placeholder-gray-500 shadow-inner"
-                  />
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="m7 7 10 10M17 7 7 17" />
+            </svg>
+          </button>
+        </div>
 
-              {/* 站内搜索结果 */}
-              {selectedEngine === 'internal' && (
-                <SiteSearchResults query={searchQuery} onClose={onClose} />
-              )}
-
-              {/* 搜索引擎选项 */}
-              <div className="p-4 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm">
-                <div className="grid grid-cols-3 gap-3 pb-2">
-                  {searchEngines.map((engine) => (
-                    <motion.button
-                      key={engine.id}
-                      whileHover={{
-                        scale: animationConfig.sidebar.menuItem.hover.scale,
-                        transition: {
-                          duration:
-                            animationConfig.sidebar.menuItem.hover.duration /
-                            1000,
-                        },
-                      }}
-                      whileTap={{
-                        scale: animationConfig.sidebar.menuItem.tap.scale,
-                        transition: {
-                          duration:
-                            animationConfig.sidebar.menuItem.tap.duration /
-                            1000,
-                        },
-                      }}
-                      onClick={() => {
-                        setSelectedEngine(engine.id);
-                        // 对于非站内搜索，只切换选中状态，不立即搜索
-                        // 对于站内搜索，不立即跳转，而是显示搜索结果
-                      }}
-                      className={`flex items-center p-3 rounded-xl border transition-all whitespace-nowrap ${
-                        selectedEngine === engine.id
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {engine.id === 'internal' ? (
-                        <SearchIcon className="w-5 h-5 mr-3 text-blue-500" />
-                      ) : (
-                        <OptimizedImage
-                          src={`https://www.google.com/s2/favicons?domain=${new URL(engine.url).hostname}&sz=64`}
-                          alt={engine.name}
-                          width={20}
-                          height={20}
-                          className="rounded-full mr-3"
-                          fallbackClassName="w-5 h-5 rounded-full mr-3"
-                        />
-                      )}
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {engine.name}
-                      </span>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
+        <div className="nx-modal-body">
+          {activeEngine.internal ? (
+            <SiteSearchResults query={searchQuery} onClose={onClose} />
+          ) : (
+            <div className="nx-modal-external">
+              <p>
+                使用 <strong>{activeEngine.name}</strong> 搜索
+                {searchQuery.trim() ? `「${searchQuery.trim()}」` : '关键词'}
+              </p>
+              <button
+                type="button"
+                className="nx-btn-ghost"
+                onClick={runExternalSearch}
+                disabled={!searchQuery.trim()}
+              >
+                打开 {activeEngine.name}
+              </button>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          )}
+        </div>
+
+        <div className="nx-modal-engines">
+          {engines.map((engine) => {
+            const host =
+              engine.internal || !isValidSiteUrl(engine.url) ? '' : safeHostname(engine.url);
+            return (
+              <button
+                key={engine.id}
+                type="button"
+                className="nx-engine-chip"
+                aria-pressed={activeEngine.id === engine.id}
+                onClick={() => setEngineId(engine.id)}
+              >
+                {engine.internal ? (
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="6.5" />
+                    <path d="m16 16 4 4" />
+                  </svg>
+                ) : host ? (
+                  <OptimizedImage
+                    src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`}
+                    alt={engine.name}
+                    width={14}
+                    height={14}
+                    fallbackClassName="nx-engine-fallback"
+                  />
+                ) : null}
+                <span>{engine.name}</span>
+              </button>
+            );
+          })}
+          <span className="nx-modal-hint">
+            {activeEngine.internal ? '输入即筛选 · Esc 关闭' : 'Enter 搜索 · Esc 关闭'}
+          </span>
+        </div>
+      </div>
+    </>
   );
 };
 

@@ -124,27 +124,24 @@ const fetchCategoriesData = async (isAdmin = false): Promise<ICategory[]> => {
 
   try {
     const response = await fetch('/data/db.json');
-    if (response.ok) {
-      const rawData = await response.json();
-      const categories = rawData.map((category: ICategory) => ({
-        id: category.id,
-        title: category.title || '未知分类',
-        icon: category.icon,
-        nav: category.nav || [],
-      }));
-      saveToLocalStorage(categories);
-      return categories;
+    if (!response.ok) {
+      console.warn(`Failed to load local data (HTTP ${response.status})`);
+      return [];
     }
+    const rawData = await response.json();
+    const categories = rawData.map((category: ICategory) => ({
+      id: category.id,
+      title: category.title || '未知分类',
+      icon: category.icon,
+      nav: category.nav || [],
+    }));
+    saveToLocalStorage(categories);
+    return categories;
   } catch (error) {
-    console.warn('Failed to load local data, using mock data:', error);
+    // Do not cache demo data: a transient failure must not mask real content.
+    console.warn('Failed to load local data:', error);
+    return [];
   }
-
-  const mockCategories: ICategory[] = [
-    { id: 1, title: '常用工具', icon: '🛠️', nav: [] },
-    { id: 2, title: '学习资源', icon: '📚', nav: [] },
-  ];
-  saveToLocalStorage(mockCategories);
-  return mockCategories;
 };
 
 // compare a single website field, accumulate into changes
