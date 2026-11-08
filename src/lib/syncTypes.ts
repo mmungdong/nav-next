@@ -85,6 +85,13 @@ export type SyncStatus =
 
 export type PushStatus = 'idle' | 'pushing';
 
+/** Result of a destructive local action that must back up before discarding. */
+export interface DiscardResult {
+  ok: boolean;
+  /** User-facing reason and next step when the local changes were kept. */
+  message: string | null;
+}
+
 /** Builds the identity of the remote file plus the GitHub account that owns the draft. */
 export function buildResourceKey(args: {
   owner: string;

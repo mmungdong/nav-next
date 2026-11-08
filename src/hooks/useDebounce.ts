@@ -18,7 +18,7 @@ export function useDebounce<T>(value: T, delay: number): T {
 }
 
 // Generic debounce utility function
-export const debounce = <T extends (...args: any[]) => any>(func: T, delay: number) => {
+export const debounce = <T extends (...args: never[]) => unknown>(func: T, delay: number) => {
   let timeoutId: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);

@@ -106,7 +106,7 @@ nav-next/
 ### 环境要求
 
 - Node.js ≥ 18.18
-- npm / pnpm / yarn 任一包管理器
+- pnpm 12（通过 `corepack enable` 提供；仓库已固定 `packageManager`）
 
 ### 安装与启动
 
@@ -116,10 +116,10 @@ git clone https://github.com/mmungdong/nav-next.git
 cd nav-next
 
 # 2. 安装依赖
-npm install
+pnpm install
 
 # 3. 启动开发服务器
-npm run dev
+pnpm run dev
 ```
 
 访问 [http://localhost:3000](http://localhost:3000) 查看效果。
@@ -128,17 +128,17 @@ npm run dev
 
 | 命令 | 说明 |
 | --- | --- |
-| `npm run dev` | 启动开发服务器 |
-| `npm run build` | 生产构建（静态导出到 `out/`） |
-| `npm run start` | 启动生产服务器 |
-| `npm run lint` | ESLint 代码检查 |
-| `npm run lint:fix` | 自动修复 lint 问题 |
-| `npm run format` | Prettier 格式化 |
-| `npm run typecheck` | TypeScript 类型检查 |
-| `npm test` | 单元测试（node:test + tsx，无需额外运行时） |
-| `npm run validate:data` | 校验 `db.json` 与 `site-config.json` |
-| `npm run check:static` | 冒烟检查导出的 `out/` 产物 |
-| `npm run test:e2e` | Playwright 针对真实静态产物 `out/` 的浏览器测试（先运行 `npm run build`） |
+| `pnpm run dev` | 启动开发服务器 |
+| `pnpm run build` | 生产构建（静态导出到 `out/`） |
+| `pnpm run start` | 启动生产服务器 |
+| `pnpm run lint` | ESLint 代码检查 |
+| `pnpm run lint:fix` | 自动修复 lint 问题 |
+| `pnpm run format` | Prettier 格式化 |
+| `pnpm run typecheck` | TypeScript 类型检查 |
+| `pnpm test` | 单元测试（node:test + tsx，无需额外运行时） |
+| `pnpm run validate:data` | 校验 `db.json` 与 `site-config.json` |
+| `pnpm run check:static` | 冒烟检查导出的 `out/` 产物 |
+| `pnpm run test:e2e` | Playwright 针对真实静态产物 `out/` 的浏览器测试（先运行 `pnpm run build`） |
 
 ---
 
@@ -149,11 +149,11 @@ npm run dev
 | 平台 | 说明 |
 | --- | --- |
 | **Vercel** | 推荐，导入仓库后自动识别 Next.js，零配置部署 |
-| **Netlify** | 设置构建命令 `npm run build`，发布目录 `out` |
-| **Cloudflare Pages** | 构建命令 `npm run build`，输出目录 `out` |
+| **Netlify** | 设置构建命令 `pnpm run build`，发布目录 `out` |
+| **Cloudflare Pages** | 构建命令 `pnpm run build`，输出目录 `out` |
 | **GitHub Pages** | 推送 `out` 目录至 `gh-pages` 分支 |
 
-> 部署前请确保 `npm run build` 成功并生成 `out` 目录。
+> 部署前请确保 `pnpm run build` 成功并生成 `out` 目录。
 
 **刷新边界：** 后台保存只会提交到 GitHub。首页读取的是已部署的
 `/data/db.json` 与 `/data/site-config.json`，因此新数据要在托管平台重新构建/发布后
@@ -179,8 +179,8 @@ GitHub 保存远程数据，浏览器不会在后台偷偷同步。
 
 ### 测试
 
-`npm test` 使用 Node 自带测试运行器执行 store、校验与同步单测。
-`npm run test:e2e` 用 Playwright 测试真实静态产物 `out/`，GitHub API 由 mock 提供，
+`pnpm test` 使用 Node 自带测试运行器执行 store、校验与同步单测。
+`pnpm run test:e2e` 用 Playwright 测试真实静态产物 `out/`，GitHub API 由 mock 提供，
 不会写入真实仓库。首次需执行 `npx playwright install chromium` 安装浏览器。E2E 目前
 仅在 macOS 执行，未在 Windows 验证。
 

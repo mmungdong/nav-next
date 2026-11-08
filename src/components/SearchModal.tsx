@@ -91,8 +91,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const getResultLinks = (): HTMLAnchorElement[] =>
-    Array.from(dialogRef.current?.querySelectorAll<HTMLAnchorElement>('[data-search-result]') ?? []);
+  const getResultLinks = (): HTMLElement[] =>
+    Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('[data-search-result]') ?? []);
 
   const runExternalSearch = () => {
     const keyword = searchQuery.trim();

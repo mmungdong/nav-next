@@ -8,66 +8,99 @@ interface WebInfo {
   [key: string]: string | undefined;
 }
 
+export interface WebInfoLookup {
+  info: WebInfo;
+  /** Why the lookup was degraded or failed; null when the service answered. */
+  error: string | null;
+}
+
+const SERVICE_URL = 'https://api.nav3.cn/api/icon';
+const DEFAULT_TIMEOUT_MS = 20_000;
+
 /**
  * 获取网站信息（标题、描述、图标等）
- * @param url 网站URL
- * @returns 网站信息对象
+ *
+ * Resolves with the metadata plus a user-facing reason when the third-party
+ * service could not be used. A caller abort rejects instead, so stale requests
+ * never produce a result.
  */
-export async function getWebInfo(url: string): Promise<WebInfo> {
-  try {
-    // 使用第三方服务获取网站信息
-    // 这里使用一个简单的方案，实际项目中可能需要更复杂的实现
+export async function getWebInfo(
+  url: string,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {}
+): Promise<WebInfoLookup> {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const abortFromCaller = () => controller.abort();
+  options.signal?.addEventListener('abort', abortFromCaller, { once: true });
+  if (options.signal?.aborted) controller.abort();
 
-    // 首先尝试使用nav3.cn的服务（与原项目保持一致）
-    const response = await fetch('https://api.nav3.cn/api/icon', {
+  const degrade = (reason: string): WebInfoLookup => ({
+    info: buildFallbackInfo(url),
+    error: reason,
+  });
+
+  try {
+    const response = await fetch(SERVICE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ url }),
+      signal: controller.signal,
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      return {
-        title: data.title || data.name || '',
-        description: data.description || data.desc || '',
-        url: data.url || data.icon || '', // 图标URL
-        ...data,
-      };
+    if (!response.ok) {
+      return degrade(`识别服务返回 HTTP ${response.status}，已填入域名与图标，可手动修改。`);
     }
 
-    // 如果主要服务不可用，尝试备选方案
-    return await getWebInfoFallback(url);
+    const raw = (await response.json()) as unknown;
+    const data =
+      typeof raw === 'object' && raw !== null
+        ? (raw as Record<string, string | undefined>)
+        : {};
+    const info: WebInfo = {
+      title: data.title || data.name || '',
+      description: data.description || data.desc || '',
+      url: data.url || data.icon || '', // 图标URL
+      ...data,
+    };
+
+    if (!info.title && !info.url) {
+      return degrade('识别服务未返回可用信息，已填入域名与图标，可手动修改。');
+    }
+    return { info, error: null };
   } catch (error) {
+    // The caller cancelled (modal closed or a newer request); nothing to report.
+    if (options.signal?.aborted) throw error;
+    if (timedOut) {
+      return degrade(
+        `自动识别超时（${timeoutMs / 1000}s），已填入域名与图标，可手动修改。`
+      );
+    }
     console.warn('获取网站信息失败:', error);
-    // 返回空对象而不是抛出错误
-    return {};
+    return degrade('自动识别失败，已填入域名与图标，可手动修改。');
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener('abort', abortFromCaller);
   }
 }
 
-/**
- * 备选方案获取网站信息
- * @param url 网站URL
- * @returns 网站信息对象
- */
-async function getWebInfoFallback(url: string): Promise<WebInfo> {
+/** Best-effort metadata derived from the URL when the service is unusable. */
+function buildFallbackInfo(url: string): WebInfo {
   try {
-    // 创建一个隐藏的iframe来获取网站信息
-    // 注意：由于CORS限制，这种方法在实际应用中可能不工作
-    // 这里仅作为示例
-
-    // 简单的备选方案：从URL中提取域名作为标题
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace('www.', '');
-
     return {
       title: domain,
       description: `访问 ${domain}`,
-      url: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}`,
+      url: getFaviconUrl(url),
     };
-  } catch (error) {
-    console.warn('备选方案获取网站信息失败:', error);
+  } catch {
     return {};
   }
 }

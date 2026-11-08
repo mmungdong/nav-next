@@ -83,6 +83,14 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
         const isTruncated = !isExpanded && sites.length > PREVIEW_COUNT;
         const visibleSites = isTruncated ? sites.slice(0, PREVIEW_COUNT) : sites;
         const hiddenCount = sites.length - visibleSites.length;
+        const hasMoreButton = isTruncated || sites.length > PREVIEW_COUNT;
+
+        // Assign keyboard indices up front so the more/less button follows the
+        // links in ArrowDown order instead of being skipped.
+        const siteIndices = visibleSites.map((site) =>
+          isValidSiteUrl(site.url) ? linkIndex++ : -1
+        );
+        const moreIndex = hasMoreButton ? linkIndex++ : -1;
 
         return (
           <div key={category.id} className="nx-results-group">
@@ -111,12 +119,11 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
                   </>
                 );
 
-                const usable = isValidSiteUrl(site.url);
-                const indexForKeyboard = usable ? linkIndex++ : -1;
+                const indexForKeyboard = siteIndices[index];
 
                 return (
                   <li key={`${category.id}-${site.id}-${index}`}>
-                    {usable ? (
+                    {indexForKeyboard >= 0 ? (
                       <a
                         data-search-result=""
                         className={`nx-result-link${activeIndex === indexForKeyboard ? ' is-active' : ''}`}
@@ -140,7 +147,8 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
             {isTruncated && (
               <button
                 type="button"
-                className="nx-results-more"
+                data-search-result=""
+                className={`nx-results-more${activeIndex === moreIndex ? ' is-active' : ''}`}
                 onClick={() => toggleCategory(category.id)}
               >
                 显示剩余 {hiddenCount} 条
@@ -149,7 +157,8 @@ const SiteSearchResults: React.FC<SiteSearchResultsProps> = ({
             {!isTruncated && sites.length > PREVIEW_COUNT && (
               <button
                 type="button"
-                className="nx-results-more"
+                data-search-result=""
+                className={`nx-results-more${activeIndex === moreIndex ? ' is-active' : ''}`}
                 onClick={() => toggleCategory(category.id)}
               >
                 收起

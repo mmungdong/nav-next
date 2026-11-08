@@ -364,9 +364,9 @@ export default function Home() {
                   threshold={0.08}
                   once
                 >
-                  {displaySites.map((site, siteIndex) => (
+                  {displaySites.map((site) => (
                     <SiteCard
-                      key={`${category.id}-${site.id}-${siteIndex}`}
+                      key={`${category.id}-${site.id}`}
                       website={site}
                       theme={theme}
                     />

@@ -14,8 +14,8 @@ interface WebsiteCardProps {
 export default function WebsiteCardAdmin({ website, categoryName, onEdit, onDelete, onMove }: WebsiteCardProps) {
   return (
     <div className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-900 transition-all duration-200 flex flex-col h-full">
-      {/* 顶部标签 */}
-      <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      {/* 顶部标签：触屏没有 hover，默认显示；有 hover 的设备才收起 */}
+      <div className="absolute top-2 right-2 flex space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity z-10">
         {website.top && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">置顶</span>}
       </div>
 

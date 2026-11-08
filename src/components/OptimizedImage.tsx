@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { isIconUrlFailed, markIconUrlAsFailed } from './DefaultIcon';
 
@@ -29,14 +29,11 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   onLoad,
   onError,
 }) => {
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // 重置错误和加载状态，当src改变时
-    setHasError(false);
-    setIsLoading(true);
-  }, [src]);
+  // State is keyed by src so switching images resets both flags without an effect.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const hasError = failedSrc === src;
+  const isLoading = Boolean(src) && loadedSrc !== src;
 
   if (!src || isIconUrlFailed(src) || hasError) {
     return (
@@ -66,14 +63,14 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
         priority={priority}
         sizes={sizes}
         onError={() => {
-          setHasError(true);
           if (src) {
+            setFailedSrc(src);
             markIconUrlAsFailed(src);
           }
           onError?.();
         }}
         onLoad={() => {
-          setIsLoading(false);
+          setLoadedSrc(src ?? null);
           onLoad?.();
         }}
         unoptimized // 对于外部URL，Next.js优化可能不适用

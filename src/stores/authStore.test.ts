@@ -103,6 +103,104 @@ test('a network failure keeps credentials and drafts usable offline', async () =
   assert.ok(state.authError?.includes('离线'));
 });
 
+test('A14 a rate-limited check keeps the token for a later retry', async () => {
+  storage.session.setItem('navnext:auth:token', 'token');
+  fetchWithStatus(429, { message: 'API rate limit exceeded' });
+
+  await useAuthStore.getState().checkAuth();
+
+  const state = useAuthStore.getState();
+  assert.equal(state.authStatus, 'offline');
+  assert.equal(state.isAuthenticated, true);
+  assert.equal(state.githubToken, 'token');
+  assert.equal(storage.session.getItem('navnext:auth:token'), 'token');
+  assert.match(state.authError ?? '', /限流/);
+});
+
+test('A14 a 403 rate limit is treated as throttling, not bad credentials', async () => {
+  storage.session.setItem('navnext:auth:token', 'token');
+  fetchWithStatus(403, { message: 'API rate limit exceeded for 1.2.3.4' });
+
+  await useAuthStore.getState().checkAuth();
+
+  const state = useAuthStore.getState();
+  assert.equal(state.authStatus, 'offline');
+  assert.equal(storage.session.getItem('navnext:auth:token'), 'token');
+  assert.match(state.authError ?? '', /限流/);
+});
+
+test('A14 a missing data file keeps the token and points at the repo config', async () => {
+  storage.session.setItem('navnext:auth:token', 'token');
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/user')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ login: 'mmungdong', id: 1 }),
+      } as unknown as Response;
+    }
+    return {
+      ok: false,
+      status: 404,
+      json: async () => ({ message: 'Not Found' }),
+    } as unknown as Response;
+  }) as typeof fetch;
+  restoreFetch = () => {
+    globalThis.fetch = original;
+  };
+
+  await useAuthStore.getState().checkAuth();
+
+  const state = useAuthStore.getState();
+  assert.equal(state.authStatus, 'offline');
+  assert.equal(storage.session.getItem('navnext:auth:token'), 'token');
+  assert.match(state.authError ?? '', /仓库|分支|配置/);
+});
+
+test('A14 a GitHub 5xx keeps the token instead of signing the user out', async () => {
+  storage.session.setItem('navnext:auth:token', 'token');
+  fetchWithStatus(500, { message: 'Server Error' });
+
+  await useAuthStore.getState().checkAuth();
+
+  const state = useAuthStore.getState();
+  assert.equal(state.authStatus, 'offline');
+  assert.equal(storage.session.getItem('navnext:auth:token'), 'token');
+  assert.match(state.authError ?? '', /稍后重试|暂时无法验证/);
+});
+
+test('A14 an owner mismatch keeps the token so another account can re-authorize', async () => {
+  storage.session.setItem('navnext:auth:token', 'token');
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith('/user')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ login: 'someone-else', id: 2 }),
+      } as unknown as Response;
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ sha: 's', content: btoa('[]') }),
+    } as unknown as Response;
+  }) as typeof fetch;
+  restoreFetch = () => {
+    globalThis.fetch = original;
+  };
+
+  await useAuthStore.getState().checkAuth();
+
+  const state = useAuthStore.getState();
+  assert.equal(state.authStatus, 'offline');
+  assert.equal(storage.session.getItem('navnext:auth:token'), 'token');
+  assert.match(state.authError ?? '', /不是配置的仓库所有者/);
+});
+
 test('remember on this device is an explicit opt-in', async () => {
   restoreFetch = installFetchMock(
     createMockGithubServer({ [dbPath]: { sha: 'sha-1', data: [] } })

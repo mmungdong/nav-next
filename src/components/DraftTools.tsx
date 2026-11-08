@@ -13,20 +13,34 @@ export default function DraftTools() {
   const configResourceKey = useConfigStore((s) => s.resourceKey);
   const navExport = useNavStore((s) => s.exportDraftText);
   const configExport = useConfigStore((s) => s.exportDraftText);
+  const navExportCorrupted = useNavStore((s) => s.exportCorruptedDraftsText);
+  const configExportCorrupted = useConfigStore((s) => s.exportCorruptedDraftsText);
+  const navDiscardCorrupted = useNavStore((s) => s.discardCorruptedDrafts);
+  const configDiscardCorrupted = useConfigStore((s) => s.discardCorruptedDrafts);
+  const navCorruptedDrafts = useNavStore((s) => s.corruptedDrafts);
+  const configCorruptedDrafts = useConfigStore((s) => s.corruptedDrafts);
   const navImport = useNavStore((s) => s.importDraftText);
   const configImport = useConfigStore((s) => s.importDraftText);
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const corruptedCount = navCorruptedDrafts.length + configCorruptedDrafts.length;
+
   const handleExport = () => {
     const drafts = [navExport(), configExport()]
       .filter((value): value is string => Boolean(value))
       .map((value) => JSON.parse(value) as unknown);
-    if (drafts.length === 0) {
+    // Damaged drafts cannot be imported, but their raw text lets the user
+    // rebuild them by hand before explicitly discarding the originals.
+    const corrupted = [navExportCorrupted(), configExportCorrupted()]
+      .filter((value): value is string => Boolean(value))
+      .flatMap((value) => JSON.parse(value) as unknown[]);
+    const payload = [...drafts, ...corrupted];
+    if (payload.length === 0) {
       setMessage('当前没有可导出的草稿');
       return;
     }
-    const blob = new Blob([JSON.stringify(drafts, null, 2)], {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json;charset=utf-8',
     });
     const url = URL.createObjectURL(blob);
@@ -35,7 +49,18 @@ export default function DraftTools() {
     anchor.download = `navnext-drafts-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setMessage('草稿已导出（不含 GitHub Token）');
+    setMessage(
+      corrupted.length > 0
+        ? '草稿已导出（含损坏草稿的原始内容，不含 GitHub Token）'
+        : '草稿已导出（不含 GitHub Token）'
+    );
+  };
+
+  const handleDiscardCorrupted = () => {
+    if (corruptedCount === 0) return;
+    if (navCorruptedDrafts.length > 0) navDiscardCorrupted();
+    if (configCorruptedDrafts.length > 0) configDiscardCorrupted();
+    setMessage(`已丢弃 ${corruptedCount} 份损坏草稿`);
   };
 
   const handleImport = async (file: File) => {
@@ -80,6 +105,30 @@ export default function DraftTools() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
+      {corruptedCount > 0 && (
+        <div className="w-full rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-3 text-amber-800 dark:text-amber-200">
+          <p>
+            检测到 {corruptedCount} 份损坏的本机草稿：原始内容已保留，未自动覆盖远程。
+            请先导出后手动修复；确认不需要时再丢弃。
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleExport}
+              className="px-3 py-2 min-h-[44px] rounded-lg border border-amber-400 dark:border-amber-600 font-medium"
+            >
+              导出原始草稿
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardCorrupted}
+              className="px-3 py-2 min-h-[44px] rounded-lg border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 font-medium"
+            >
+              丢弃损坏草稿
+            </button>
+          </div>
+        </div>
+      )}
       <button
         type="button"
         onClick={handleExport}

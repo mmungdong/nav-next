@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Browser tests run against the exported `out/` artifact, never `next dev`.
-// Run `npm run build` first (or `npm run test:e2e`, which builds and then runs).
+// Run `pnpm run build` first; `pnpm run test:e2e` does not build on its own.
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,

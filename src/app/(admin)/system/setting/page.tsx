@@ -1,25 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { useConfigStore } from '@/stores/configStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useFlashMessage } from '@/hooks/useFlashMessage';
 import { ThemeMode } from '@/types';
+
+// Hydration-safe "is the client mounted" flag without an effect.
+const subscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function SettingManagementPage() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
 
   const { siteConfig, saveConfig, pushToRemote, dirty, conflict } = useConfigStore();
   const { githubToken } = useAuthStore();
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { message, flash, showPersistent } = useFlashMessage(5000);
 
   // siteConfig.site is the single source of truth — no local form shadow.
   const update = (patch: Partial<typeof siteConfig.site>) => {
     const saved = saveConfig({ ...siteConfig, site: { ...siteConfig.site, ...patch } });
-    if (!saved) setMessage({ type: 'error', text: '本机保存失败，改动仅在当前页面内' });
+    if (!saved) showPersistent({ type: 'error', text: '本机保存失败，改动仅在当前页面内' });
   };
 
   const handleThemeChange = (value: ThemeMode) => {
@@ -29,18 +34,18 @@ export default function SettingManagementPage() {
 
   const handleSave = async () => {
     if (!githubToken) {
-      setMessage({ type: 'error', text: '未配置 GitHub Token' });
+      flash('error', '未配置 GitHub Token');
       return;
     }
     setSaving(true);
     const result = await pushToRemote(githubToken);
     setSaving(false);
-    setMessage(
+    flash(
+      result.status === 'success' ? 'success' : 'error',
       result.status === 'success'
-        ? { type: 'success', text: 'GitHub 已更新；首页需等待部署后才会显示' }
-        : { type: 'error', text: result.message }
+        ? 'GitHub 已更新；首页需等待部署后才会显示'
+        : result.message
     );
-    setTimeout(() => setMessage(null), 5000);
   };
 
   return (

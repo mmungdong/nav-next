@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { useConfigStore } from '@/stores/configStore';
 
@@ -7,6 +7,7 @@ export default function FloatingControls() {
   const [showTopBtn, setShowTopBtn] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshCategories = useNavStore((s) => s.refreshPublic);
   const refreshConfig = useConfigStore((s) => s.refreshPublic);
 
@@ -19,6 +20,13 @@ export default function FloatingControls() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (statusTimerRef.current !== null) clearTimeout(statusTimerRef.current);
+    },
+    []
+  );
+
   const handleRefresh = async () => {
     setRefreshing(true);
     setStatus(null);
@@ -29,7 +37,11 @@ export default function FloatingControls() {
       navError || configError ? '刷新失败，当前显示的是缓存数据' : '已重新获取部署数据'
     );
     setRefreshing(false);
-    setTimeout(() => setStatus(null), 4000);
+    if (statusTimerRef.current !== null) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => {
+      statusTimerRef.current = null;
+      setStatus(null);
+    }, 4000);
   };
 
   return (

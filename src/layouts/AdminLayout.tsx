@@ -9,6 +9,7 @@ import { useNavStore } from '@/stores/navStore';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import DraftTools from '@/components/DraftTools';
 import { useAdminSyncGuard } from '@/hooks/useAdminSyncGuard';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 import { isSyncSuccess } from '@/lib/syncTypes';
 
 interface AdminLayoutProps {
@@ -22,11 +23,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [overwriteTarget, setOverwriteTarget] = useState<'nav' | 'config' | null>(null);
-  const sidebarToggleRef = useRef<HTMLButtonElement>(null);
   const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
 
   const enabled = (authStatus === 'authenticated' || authStatus === 'offline') && isAuthenticated;
   const { status, error, retry, confirmLeave, pendingLeave } = useAdminSyncGuard(enabled);
+
+  // Re-verifying the token is what clears a stale offline banner; data init alone
+  // cannot tell a recovered rate limit from a still-broken credential.
+  const retryConnection = async () => {
+    await checkAuth();
+    retry();
+  };
 
   const siteConfig = useConfigStore((s) => s.siteConfig);
   const navConflict = useNavStore((s) => s.conflict);
@@ -47,6 +54,61 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const configOverwrite = useConfigStore((s) => s.overwriteRemote);
   const compareData = useNavStore((s) => s.compareData);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
+  const [adoptBlocked, setAdoptBlocked] = useState<'nav' | 'config' | null>(null);
+  const [adoptWithoutBackup, setAdoptWithoutBackup] = useState(false);
+
+  const sidebarRef = useRef<HTMLElement>(null);
+  const leaveDialogRef = useRef<HTMLDivElement>(null);
+  const leaveCancelRef = useRef<HTMLButtonElement>(null);
+  const overwriteDialogRef = useRef<HTMLDivElement>(null);
+  const overwriteCancelRef = useRef<HTMLButtonElement>(null);
+
+  // The mobile drawer behaves like a modal: Escape closes it, Tab stays inside.
+  useDialogFocus({
+    isOpen: sidebarOpen,
+    dialogRef: sidebarRef,
+    onClose: () => setSidebarOpen(false),
+    initialFocusRef: firstLinkRef,
+  });
+
+  useDialogFocus({
+    isOpen: Boolean(pendingLeave),
+    dialogRef: leaveDialogRef,
+    onClose: pendingLeave?.onCancel,
+    initialFocusRef: leaveCancelRef,
+  });
+
+  useDialogFocus({
+    isOpen: Boolean(overwriteTarget),
+    dialogRef: overwriteDialogRef,
+    onClose: () => setOverwriteTarget(null),
+    initialFocusRef: overwriteCancelRef,
+  });
+
+  // A resolved conflict must not leave a stale "discard without backup" consent.
+  const navAdoptBlocked = adoptBlocked === 'nav' && Boolean(navConflict);
+  const configAdoptBlocked = adoptBlocked === 'config' && Boolean(configConflict);
+
+  const handleAdopt = (target: 'nav' | 'config') => {
+    const blocked = target === 'nav' ? navAdoptBlocked : configAdoptBlocked;
+    const discardWithoutBackup = blocked && adoptWithoutBackup;
+    const result =
+      target === 'nav' ? navAdopt({ discardWithoutBackup }) : configAdopt({ discardWithoutBackup });
+    if (result.ok) {
+      setAdoptBlocked(null);
+      setAdoptWithoutBackup(false);
+      setConflictMessage(null);
+      return;
+    }
+    // The draft was kept because its recovery copy could not be written.
+    setAdoptBlocked(target);
+    setAdoptWithoutBackup(false);
+    setConflictMessage(
+      result.message
+        ? `${result.message}如确认不再需要恢复，请勾选下方选项后再次点击「采用远程」。`
+        : null
+    );
+  };
 
   useEffect(() => {
     void checkAuth();
@@ -61,17 +123,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     if (!enabled) return;
     setTheme(siteConfig.site.theme);
   }, [enabled, setTheme, siteConfig.site.theme]);
-
-  const sidebarOpenRef = useRef(false);
-  useEffect(() => {
-    if (sidebarOpen) {
-      sidebarOpenRef.current = true;
-      firstLinkRef.current?.focus();
-    } else if (sidebarOpenRef.current) {
-      sidebarOpenRef.current = false;
-      sidebarToggleRef.current?.focus({ preventScroll: true });
-    }
-  }, [sidebarOpen]);
 
   const handleLogout = () => {
     confirmLeave(() => {
@@ -177,7 +228,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       <button
-        ref={sidebarToggleRef}
         type="button"
         onClick={() => setSidebarOpen(true)}
         aria-expanded={sidebarOpen}
@@ -197,7 +247,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       <aside
         id="admin-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 w-[250px] transform transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
+        ref={sidebarRef}
+        role={sidebarOpen ? 'dialog' : undefined}
+        aria-modal={sidebarOpen ? true : undefined}
+        aria-label={sidebarOpen ? '后台导航' : undefined}
+        className={`fixed inset-y-0 left-0 z-50 w-[200px] lg:w-[250px] transform transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -263,8 +317,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {authStatus === 'offline' && (
           <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
             {authError ?? '当前离线：凭据和草稿已保留，可以继续编辑，但暂时不能推送。'}
-            <button onClick={retry} className="ml-3 underline font-medium">
+            <button
+              onClick={() => void retryConnection()}
+              className="ml-3 underline font-medium"
+            >
               重试连接
+            </button>
+            <button
+              onClick={() => router.push('/login')}
+              className="ml-3 underline font-medium"
+            >
+              重新授权
             </button>
           </div>
         )}
@@ -288,10 +351,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={navAdopt}
+                    onClick={() => handleAdopt('nav')}
                     className="px-3 py-2 rounded-md bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700"
                   >
-                    采用远程（放弃本机）
+                    {navAdoptBlocked && adoptWithoutBackup
+                      ? '仍要采用远程（不保留副本）'
+                      : '采用远程（放弃本机）'}
                   </button>
                   <button
                     onClick={() => setOverwriteTarget('nav')}
@@ -303,6 +368,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     保留草稿：关闭本提示即可，推送会保持锁定
                   </span>
                 </div>
+                {navAdoptBlocked && (
+                  <label className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
+                    <input
+                      type="checkbox"
+                      checked={adoptWithoutBackup}
+                      onChange={(event) => setAdoptWithoutBackup(event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    我已导出草稿，确认放弃本机改动（不保留恢复副本）
+                  </label>
+                )}
               </div>
             )}
             {configConflict && (
@@ -310,10 +386,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <p>站点配置：远程已被其他设备更新，本机草稿已保留。</p>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={configAdopt}
+                    onClick={() => handleAdopt('config')}
                     className="px-3 py-2 rounded-md bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700"
                   >
-                    采用远程（放弃本机）
+                    {configAdoptBlocked && adoptWithoutBackup
+                      ? '仍要采用远程（不保留副本）'
+                      : '采用远程（放弃本机）'}
                   </button>
                   <button
                     onClick={() => setOverwriteTarget('config')}
@@ -322,6 +400,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     用本机版本覆盖
                   </button>
                 </div>
+                {configAdoptBlocked && (
+                  <label className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
+                    <input
+                      type="checkbox"
+                      checked={adoptWithoutBackup}
+                      onChange={(event) => setAdoptWithoutBackup(event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    我已导出草稿，确认放弃本机改动（不保留恢复副本）
+                  </label>
+                )}
               </div>
             )}
           </div>
@@ -338,6 +427,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={pendingLeave.onCancel} />
           <div
+            ref={leaveDialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="未推送的改动"
@@ -352,8 +442,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {pendingLeave.error && (
               <p className="text-sm text-red-600 dark:text-red-400 mb-4">{pendingLeave.error}</p>
             )}
+            {pendingLeave.discardBlocked && (
+              <div className="mb-4 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 space-y-2">
+                <p className="text-xs text-red-700 dark:text-red-300">
+                  恢复副本未能写入本机，改动已保留。请先取消并使用「导出草稿」保存；确认不再需要恢复时，可直接丢弃。
+                </p>
+                <button
+                  onClick={pendingLeave.onDiscardWithoutBackup}
+                  className="px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                >
+                  仍要丢弃（不保留恢复副本）
+                </button>
+              </div>
+            )}
             <div className="flex flex-wrap justify-end gap-2">
               <button
+                ref={leaveCancelRef}
                 onClick={pendingLeave.onCancel}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg"
               >
@@ -387,6 +491,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50" onClick={() => setOverwriteTarget(null)} />
           <div
+            ref={overwriteDialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="确认覆盖远程"
@@ -401,6 +506,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </p>
             <div className="flex justify-end gap-2">
               <button
+                ref={overwriteCancelRef}
                 onClick={() => setOverwriteTarget(null)}
                 className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg"
               >

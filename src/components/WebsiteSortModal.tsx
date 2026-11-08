@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import OptimizedImage from '@/components/OptimizedImage';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 import { ICategory } from '@/types';
 
 interface WebsiteSortModalProps {
@@ -19,7 +20,11 @@ export default function WebsiteSortModal({
 }: WebsiteSortModalProps) {
   const [orderedIds, setOrderedIds] = useState<number[]>([]);
   const [stale, setStale] = useState(false);
-  const snapshotRef = useRef('');
+  // null means "not loaded yet"; an empty category is a real snapshot too.
+  const snapshotRef = useRef<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useDialogFocus({ isOpen, dialogRef, onClose });
 
   const reload = () => {
     const ids = category.nav.map((website) => website.id);
@@ -37,7 +42,7 @@ export default function WebsiteSortModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || !snapshotRef.current) return;
+    if (!isOpen || snapshotRef.current === null) return;
     if (category.nav.map((website) => website.id).join(',') !== snapshotRef.current) {
       setStale(true);
     }
@@ -84,6 +89,7 @@ export default function WebsiteSortModal({
         onClick={onClose}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={`网站排序 - ${category.title}`}

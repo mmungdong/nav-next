@@ -2,10 +2,10 @@
   "name": "nav-next",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run validate:data",
-    "build": "next build",
+    "build": "tsx scripts/validate-data.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",

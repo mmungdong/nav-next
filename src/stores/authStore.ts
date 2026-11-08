@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { GitHubUser, verifyGithubToken } from '@/lib/githubApi';
+import { SyncErrorCode } from '@/lib/syncTypes';
 
 /**
  * Single-owner GitHub auth. There is no username/password login, no local role,
@@ -30,7 +31,6 @@ interface AuthState {
     options?: { remember?: boolean }
   ) => Promise<{ valid: boolean; message?: string }>;
   checkAuth: () => Promise<void>;
-  setGithubToken: (token: string) => void;
   clearGithubToken: () => void;
   logout: () => void;
 }
@@ -107,6 +107,30 @@ const clearAllCredentials = (): void => {
   remove(local(), REMEMBERED_TOKEN_KEY);
   remove(local(), REMEMBER_FLAG_KEY);
   for (const key of LEGACY_KEYS) remove(local(), key);
+};
+
+/**
+ * Only 401 proves the token is invalid. Every other failure keeps the token so
+ * the user can retry, free a rate limit, or fix the repo configuration.
+ */
+const describeRecoverableAuthError = (
+  code: SyncErrorCode | undefined,
+  message?: string
+): string => {
+  const detail = message ?? '无法验证 Token';
+  switch (code) {
+    case 'network_error':
+    case 'timeout':
+      return `离线：${detail}，凭据与草稿已保留`;
+    case 'rate_limited':
+      return `GitHub 限流：${detail}。凭据与草稿已保留，请稍后重试`;
+    case 'not_found':
+      return `${detail}。凭据与草稿已保留，请检查仓库/分支/文件配置后重试`;
+    case 'forbidden':
+      return `${detail}。凭据与草稿已保留，请使用仓库所有者账号重新授权`;
+    default:
+      return `${detail}。暂时无法验证授权，凭据与草稿已保留，请稍后重试`;
+  }
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -189,8 +213,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
-    if (result.code === 'network_error' || result.code === 'timeout') {
-      // Keep credentials and drafts; the user can keep editing offline.
+    if (result.code !== 'unauthorized') {
+      // Keep credentials and drafts; a 403/404/5xx does not invalidate the token.
       persistSession(token, cachedUser);
       set({
         isAuthenticated: true,
@@ -198,7 +222,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         githubToken: token,
         githubUser: cachedUser,
         rememberDevice,
-        authError: `离线：${result.message ?? '无法验证 Token'}，凭据与草稿已保留`,
+        authError: describeRecoverableAuthError(result.code, result.message),
       });
       return;
     }
@@ -212,11 +236,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       rememberDevice: false,
       authError: result.message ?? 'GitHub 授权已失效，请重新授权',
     });
-  },
-
-  setGithubToken: (token) => {
-    persistSession(token, get().githubUser);
-    set({ githubToken: token });
   },
 
   clearGithubToken: () => {

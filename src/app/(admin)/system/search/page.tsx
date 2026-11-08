@@ -5,6 +5,7 @@ import { useConfigStore } from '@/stores/configStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ISearchEngine } from '@/types';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import { useFlashMessage } from '@/hooks/useFlashMessage';
 
 export default function SearchManagementPage() {
   const { siteConfig, saveConfig, pushToRemote, dirty, conflict } = useConfigStore();
@@ -15,12 +16,7 @@ export default function SearchManagementPage() {
   const [editing, setEditing] = useState<ISearchEngine | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const flash = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 3000);
-  };
+  const { message, flash } = useFlashMessage(3000);
 
   const writeEngines = (next: ISearchEngine[]) => {
     const saved = saveConfig({ ...siteConfig, search: { engines: next } });

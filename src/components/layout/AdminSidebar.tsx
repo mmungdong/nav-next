@@ -1,9 +1,10 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { animationConfig } from '@/lib/animations';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 interface AdminSidebarProps {
   onLogout?: () => void;
@@ -22,8 +23,18 @@ const menuItems = [
 export default function AdminSidebar({ onLogout, onBackHome, onNavigate, firstLinkRef }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [loadingHref, setLoadingHref] = useState<string | null>(null);
+  // Pending nav remembers the path it started from, so it clears itself once the route changes.
+  const [pendingNav, setPendingNav] = useState<{ href: string; from: string } | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
+  const logoutDialogRef = useRef<HTMLDivElement>(null);
+  const logoutCancelRef = useRef<HTMLButtonElement>(null);
+
+  useDialogFocus({
+    isOpen: showLogoutConfirm,
+    dialogRef: logoutDialogRef,
+    onClose: () => setShowLogoutConfirm(false),
+    initialFocusRef: logoutCancelRef,
+  });
 
   const getActiveHref = useCallback((currentPath: string) => {
     const exactMatch = menuItems.find((item) => item.href === currentPath);
@@ -43,26 +54,21 @@ export default function AdminSidebar({ onLogout, onBackHome, onNavigate, firstLi
   );
 
   const isLoading = useCallback(
-    (href: string) => loadingHref === href,
-    [loadingHref]
+    (href: string) => pendingNav?.href === href && pendingNav.from === pathname,
+    [pendingNav, pathname]
   );
 
   const handleMenuClick = useCallback(
     (href: string) => {
       return (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
-        setLoadingHref(href);
+        setPendingNav({ href, from: pathname });
         onNavigate?.();
         router.push(href);
       };
     },
-    [router, onNavigate]
+    [router, onNavigate, pathname]
   );
-
-  // Clear loading spinner when navigation completes
-  useEffect(() => {
-    setLoadingHref(null);
-  }, [pathname]);
 
   const handleLogoutConfirm = () => {
     if (onLogout) {
@@ -184,6 +190,10 @@ export default function AdminSidebar({ onLogout, onBackHome, onNavigate, firstLi
               onClick={() => setShowLogoutConfirm(false)}
             ></div>
             <div
+              ref={logoutDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="确认退出登录"
               className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto border border-white/30 dark:border-gray-700/50"
               onClick={(e) => e.stopPropagation()}
             >
@@ -193,7 +203,8 @@ export default function AdminSidebar({ onLogout, onBackHome, onNavigate, firstLi
                 </h3>
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+                  aria-label="关闭"
+                  className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
                 >
                   <svg
                     className="h-6 w-6"
@@ -241,9 +252,10 @@ export default function AdminSidebar({ onLogout, onBackHome, onNavigate, firstLi
 
               <div className="px-6 py-4 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm flex justify-end space-x-3 rounded-b-2xl">
                 <button
+                  ref={logoutCancelRef}
                   type="button"
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+                  className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
                 >
                   取消
                 </button>

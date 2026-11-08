@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -30,6 +30,7 @@ export default function GithubTokenAuth({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const { validateGithubToken, isAuthenticated, authError } = useAuthStore();
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 检查是否已经认证
   useEffect(() => {
@@ -37,6 +38,13 @@ export default function GithubTokenAuth({
       router.push('/system');
     }
   }, [isAuthenticated, router]);
+
+  useEffect(
+    () => () => {
+      if (redirectTimerRef.current !== null) clearTimeout(redirectTimerRef.current);
+    },
+    []
+  );
 
   useEffect(() => {
     if (authError) setError(authError);
@@ -60,7 +68,9 @@ export default function GithubTokenAuth({
       if (result.valid) {
         setSuccess(true);
         // 短暂延迟后跳转到系统页面
-        setTimeout(() => {
+        if (redirectTimerRef.current !== null) clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = setTimeout(() => {
+          redirectTimerRef.current = null;
           router.push('/system');
           if (onAuthSuccess) {
             onAuthSuccess();

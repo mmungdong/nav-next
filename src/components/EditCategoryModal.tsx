@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { ICategory } from '@/types';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 interface EditCategoryModalProps {
   category?: ICategory;
@@ -10,34 +11,24 @@ interface EditCategoryModalProps {
   onSave: (category: ICategory) => void;
 }
 
+const buildInitial = (category?: ICategory): ICategory => ({
+  id: category?.id || Date.now(),
+  title: category?.title || '',
+  icon: category?.icon || '',
+  nav: category?.nav || [],
+});
+
 export default function EditCategoryModal({
   category,
   isOpen,
   onClose,
   onSave,
 }: EditCategoryModalProps) {
-  // 初始状态为空，由 useEffect 在弹窗打开时设置
-  const [formData, setFormData] = useState<ICategory>({
-    id: 0,
-    title: '',
-    icon: '',
-    nav: [],
-  });
-  const [initialSnapshot, setInitialSnapshot] = useState('');
-
-  // 当弹窗打开或 category 属性变化时，重置表单
-  useEffect(() => {
-    if (isOpen) {
-      const next = {
-        id: category?.id || Date.now(),
-        title: category?.title || '',
-        icon: category?.icon || '',
-        nav: category?.nav || [],
-      };
-      setFormData(next);
-      setInitialSnapshot(JSON.stringify(next));
-    }
-  }, [isOpen, category]);
+  // The parent remounts this modal per category (key), so props seed the state.
+  const [formData, setFormData] = useState<ICategory>(() => buildInitial(category));
+  const [initialSnapshot] = useState(() => JSON.stringify(formData));
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const requestClose = () => {
     if (JSON.stringify(formData) !== initialSnapshot && !window.confirm('表单还有未保存的内容，确认放弃？')) {
@@ -45,6 +36,8 @@ export default function EditCategoryModal({
     }
     onClose();
   };
+
+  useDialogFocus({ isOpen, dialogRef, onClose: requestClose, initialFocusRef: titleInputRef });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -70,6 +63,10 @@ export default function EditCategoryModal({
         onClick={requestClose}
       ></div>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={category ? '编辑分类' : '添加分类'}
         className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -104,6 +101,7 @@ export default function EditCategoryModal({
                 分类名称
               </label>
               <input
+                ref={titleInputRef}
                 type="text"
                 name="title"
                 value={formData.title}

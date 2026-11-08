@@ -17,6 +17,8 @@ export interface MockGithubServer {
   getGate: Promise<void> | null;
   /** Simulates a connection drop after the server already committed the write. */
   networkErrorAfterPut: boolean;
+  /** Simulates a connection drop before the write is applied. */
+  networkErrorBeforeWrite: boolean;
   /** Runs after the request body is read, before the SHA comparison. */
   beforePut: ((path: string) => void) | null;
   lastPutBody: { sha?: string; content?: string; message?: string; branch?: string } | null;
@@ -44,6 +46,7 @@ export const createMockGithubServer = (
   putGate: null,
   getGate: null,
   networkErrorAfterPut: false,
+  networkErrorBeforeWrite: false,
   beforePut: null,
   lastPutBody: null,
   onPutStart: null,
@@ -113,6 +116,11 @@ export function installFetchMock(server: MockGithubServer): () => void {
       server.onPutStart?.();
       if (server.putGate) await server.putGate;
       server.beforePut?.(filePath);
+
+      if (server.networkErrorBeforeWrite) {
+        server.networkErrorBeforeWrite = false;
+        throw new TypeError('fetch failed');
+      }
 
       const current = server.files[filePath];
       if (body.sha !== current.sha) {

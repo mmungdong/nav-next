@@ -106,7 +106,7 @@ nav-next/
 ### Prerequisites
 
 - Node.js ≥ 18.18
-- Any of npm / pnpm / yarn
+- pnpm 12 (`corepack enable` provides it; the repo pins `packageManager`)
 
 ### Install & Run
 
@@ -116,10 +116,10 @@ git clone https://github.com/mmungdong/nav-next.git
 cd nav-next
 
 # 2. Install dependencies
-npm install
+pnpm install
 
 # 3. Start the dev server
-npm run dev
+pnpm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the result.
@@ -128,17 +128,17 @@ Open [http://localhost:3000](http://localhost:3000) to see the result.
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build (static export to `out/`) |
-| `npm run start` | Start the production server |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix lint issues |
-| `npm run format` | Format with Prettier |
-| `npm run typecheck` | TypeScript check without emitting |
-| `npm test` | Unit tests (node:test + tsx, no extra runtime) |
-| `npm run validate:data` | Validate `db.json` and `site-config.json` |
-| `npm run check:static` | Smoke-check the exported `out/` artifact |
-| `npm run test:e2e` | Playwright against the exported `out/` build (run `npm run build` first) |
+| `pnpm run dev` | Start the dev server |
+| `pnpm run build` | Production build (static export to `out/`) |
+| `pnpm run start` | Start the production server |
+| `pnpm run lint` | Run ESLint |
+| `pnpm run lint:fix` | Auto-fix lint issues |
+| `pnpm run format` | Format with Prettier |
+| `pnpm run typecheck` | TypeScript check without emitting |
+| `pnpm test` | Unit tests (node:test + tsx, no extra runtime) |
+| `pnpm run validate:data` | Validate `db.json` and `site-config.json` |
+| `pnpm run check:static` | Smoke-check the exported `out/` artifact |
+| `pnpm run test:e2e` | Playwright against the exported `out/` build (run `pnpm run build` first) |
 
 ---
 
@@ -149,11 +149,11 @@ Thanks to the static output, this project can be deployed on any static hosting 
 | Platform | Notes |
 | --- | --- |
 | **Vercel** | Recommended — import the repo, auto-detects Next.js, zero config |
-| **Netlify** | Build command `npm run build`, publish directory `out` |
-| **Cloudflare Pages** | Build command `npm run build`, output directory `out` |
+| **Netlify** | Build command `pnpm run build`, publish directory `out` |
+| **Cloudflare Pages** | Build command `pnpm run build`, output directory `out` |
 | **GitHub Pages** | Push the `out` directory to a `gh-pages` branch |
 
-> Ensure `npm run build` succeeds and the `out` directory is generated before deploying.
+> Ensure `pnpm run build` succeeds and the `out` directory is generated before deploying.
 
 **Refresh boundary:** saving in the admin only commits to GitHub. The public site
 reads the deployed `/data/db.json` and `/data/site-config.json`, so new content
@@ -185,8 +185,8 @@ GitHub holds the remote data; the browser never syncs behind your back.
 
 ### Testing
 
-`npm test` runs the store/validation/sync unit tests with Node's test runner.
-`npm run test:e2e` runs Playwright against the real static `out/` build; the
+`pnpm test` runs the store/validation/sync unit tests with Node's test runner.
+`pnpm run test:e2e` runs Playwright against the real static `out/` build; the
 GitHub API is mocked, so no real repository is written. Install the browser once
 with `npx playwright install chromium`. The e2e suite has been executed on
 macOS only; it is not verified on Windows.

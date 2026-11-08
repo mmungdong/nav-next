@@ -28,20 +28,20 @@ try {
   if (result.ok) {
     const siteCount = categories.reduce((sum, category) => sum + category.nav.length, 0);
     console.log(`✓ db.json: ${categories.length} categories, ${siteCount} sites`);
+
+    const deprecated = categories.reduce(
+      (sum, category) =>
+        sum + category.nav.filter((site) => site && 'ownVisible' in site).length,
+      0
+    );
+    if (deprecated > 0) {
+      console.warn(
+        `! db.json contains ${deprecated} legacy ownVisible field(s); they are removed on the next save.`
+      );
+    }
   } else {
     failures += 1;
     console.error(`✗ db.json invalid:\n  ${formatIssues(result.issues, 20)}`);
-  }
-
-  const deprecated = categories.reduce(
-    (sum, category) =>
-      sum + category.nav.filter((site) => site && 'ownVisible' in site).length,
-    0
-  );
-  if (deprecated > 0) {
-    console.warn(
-      `! db.json contains ${deprecated} legacy ownVisible field(s); they are removed on the next save.`
-    );
   }
 } catch (error) {
   failures += 1;

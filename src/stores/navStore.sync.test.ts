@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { useNavStore } from '@/stores/navStore';
 import { dbPath } from '@/lib/config';
 import { ICategory } from '@/types';
-import { loadDraft, DRAFT_PREFIX, removeDraft } from '@/lib/draftStorage';
+import { loadDraft, DRAFT_PREFIX, TAB_DRAFT_ID_PREFIX, removeDraft } from '@/lib/draftStorage';
 import {
   createDeferred,
   createMockGithubServer,
@@ -140,6 +140,94 @@ test('A03 adopting the remote clears the local draft only after backing it up', 
   );
 });
 
+type DiscardResult = { ok: boolean; message: string | null };
+type DiscardAction = (options?: { discardWithoutBackup?: boolean }) => DiscardResult;
+
+/** Calls an action whose result may not be implemented yet, so the assertion fails cleanly. */
+const callDiscard = (action: () => void, options?: { discardWithoutBackup?: boolean }) =>
+  (action as unknown as DiscardAction)(options) as DiscardResult | undefined;
+
+const conflictedState = (title: string, draftId: string) =>
+  useNavStore.setState({
+    draftId,
+    baselineReady: true,
+    baseSha: 'sha-1',
+    baseline: categories('远程'),
+    categories: categories(title),
+    dirty: true,
+    draftIssue: null,
+    conflict: {
+      remoteSha: 'sha-2',
+      remoteData: categories('远程2'),
+      detectedAt: new Date().toISOString(),
+    },
+  });
+
+const draftKeyFor = (draftId: string) => {
+  const { resourceKey } = useNavStore.getState();
+  return `${DRAFT_PREFIX}${encodeURIComponent(resourceKey)}:${draftId}`;
+};
+
+test('A03b adoptRemote keeps the draft and the conflict when the backup cannot be written', () => {
+  conflictedState('本机未推送', 'tab-1');
+  const draftKey = draftKeyFor('tab-1');
+  storage.local.setItem(draftKey, '{"pending":true}');
+
+  storage.local.failWrites = true;
+  const result = callDiscard(useNavStore.getState().adoptRemote);
+  storage.local.failWrites = false;
+
+  assert.equal(result?.ok, false, 'adopting is refused when the backup fails');
+  assert.ok(result?.message, 'the user gets the reason and the next step');
+  assert.equal(useNavStore.getState().categories[0].title, '本机未推送');
+  assert.ok(useNavStore.getState().conflict, 'conflict stays open');
+  assert.equal(storage.local.getItem(draftKey), '{"pending":true}', 'draft is not deleted');
+  assert.ok(useNavStore.getState().draftIssue, 'the storage problem is surfaced');
+});
+
+test('A03c adoptRemote drops the backup only after explicit confirmation', () => {
+  conflictedState('本机未推送', 'tab-2');
+  const draftKey = draftKeyFor('tab-2');
+  storage.local.setItem(draftKey, '{"pending":true}');
+
+  storage.local.failWrites = true;
+  const result = callDiscard(useNavStore.getState().adoptRemote, { discardWithoutBackup: true });
+  storage.local.failWrites = false;
+
+  assert.equal(result?.ok, true);
+  assert.equal(useNavStore.getState().categories[0].title, '远程2');
+  assert.equal(useNavStore.getState().conflict, null);
+  assert.equal(storage.local.getItem(draftKey), null);
+});
+
+test('A03d adoptRemote needs no backup when there are no local changes', () => {
+  conflictedState('远程', 'tab-3');
+  useNavStore.setState({ dirty: false });
+
+  storage.local.failWrites = true;
+  const result = callDiscard(useNavStore.getState().adoptRemote);
+  storage.local.failWrites = false;
+
+  assert.equal(result?.ok, true);
+  assert.equal(useNavStore.getState().categories[0].title, '远程2');
+});
+
+test('A03e discardLocal keeps the dirty state when the backup cannot be written', () => {
+  conflictedState('本机未推送', 'tab-4');
+  useNavStore.setState({ conflict: null });
+  const draftKey = draftKeyFor('tab-4');
+  storage.local.setItem(draftKey, '{"pending":true}');
+
+  storage.local.failWrites = true;
+  const result = callDiscard(useNavStore.getState().discardLocal);
+  storage.local.failWrites = false;
+
+  assert.equal(result?.ok, false);
+  assert.equal(useNavStore.getState().categories[0].title, '本机未推送');
+  assert.equal(useNavStore.getState().dirty, true);
+  assert.equal(storage.local.getItem(draftKey), '{"pending":true}');
+});
+
 test('A04 overwrite uses the reviewed remote SHA and conflicts again if remote moves', async () => {
   startServer(categories('远程'));
   await useNavStore.getState().initAdmin('token');
@@ -211,6 +299,34 @@ test('A06 a timeout after the commit is verified instead of blindly retried', as
   assert.equal(useNavStore.getState().baseSha, server.files[dbPath].sha);
 });
 
+test('A06b a timeout whose re-read shows a moved remote is reported as a conflict', async () => {
+  startServer(categories('远程'));
+  await useNavStore.getState().initAdmin('token');
+  useNavStore.getState().saveCategories(categories('本机草稿'));
+
+  // The connection drops before the write lands, and another device committed
+  // meanwhile. Retrying blindly would be wrong: the user must resolve it.
+  server.beforePut = () => {
+    server.files[dbPath] = { sha: 'sha-2', data: categories('另一台设备的提交') };
+  };
+  server.networkErrorBeforeWrite = true;
+
+  const result = await useNavStore.getState().pushToRemote('token');
+  const state = useNavStore.getState();
+
+  assert.equal(result.status, 'conflict');
+  assert.equal(state.syncStatus, 'conflict');
+  assert.equal(state.conflict?.remoteSha, 'sha-2');
+  assert.equal(state.conflict?.remoteData[0].title, '另一台设备的提交');
+  assert.equal(state.categories[0].title, '本机草稿', 'local edits are untouched');
+  assert.ok(currentDraft(), 'draft survives for conflict resolution');
+
+  // The standard conflict actions now work on this state.
+  await useNavStore.getState().overwriteRemote('token');
+  assert.equal(server.files[dbPath].sha.startsWith('sha-'), true);
+  assert.equal((server.files[dbPath].data as ICategory[])[0].title, '本机草稿');
+});
+
 test('A07 an init response cannot overwrite an edit made while it was pending', async () => {
   startServer(categories('远程'));
   const gate = createDeferred();
@@ -229,6 +345,8 @@ test('A07 an init response cannot overwrite an edit made while it was pending', 
   assert.equal(state.categories[0].title, '初始化期间编辑');
   assert.equal(state.revision, 1);
   assert.equal(state.dirty, true);
+  assert.equal(state.loading, false);
+  assert.notEqual(state.syncStatus, 'loading', 'the race path must not leave the admin loading');
 });
 
 test('A10 storage failure is reported and never claims the draft was saved', async () => {
@@ -243,6 +361,41 @@ test('A10 storage failure is reported and never claims the draft was saved', asy
   assert.equal(state.dirty, true);
   assert.ok(state.draftIssue?.includes('存储'));
   assert.equal(currentDraft(), null);
+});
+
+test('A10b a corrupted draft is preserved, exported and only removed on explicit discard', async () => {
+  startServer(categories('远程'));
+  const resourceKey = useNavStore.getState().resourceKey;
+  const corruptedId = 'corrupt-tab';
+  const raw = '{"schemaVersion":2,"resourceKey":"broken';
+  storage.session.setItem(`${TAB_DRAFT_ID_PREFIX}${resourceKey}`, corruptedId);
+  const corruptedKey = `${DRAFT_PREFIX}${encodeURIComponent(resourceKey)}:${corruptedId}`;
+  storage.local.setItem(corruptedKey, raw);
+
+  await useNavStore.getState().initAdmin('token');
+
+  const state = useNavStore.getState();
+  assert.equal(state.categories[0].title, '远程');
+  assert.equal(storage.local.getItem(corruptedKey), raw, 'corrupted draft is not deleted');
+  assert.equal(state.corruptedDrafts.length, 1);
+  assert.equal(state.corruptedDrafts[0]?.raw, raw);
+  assert.notEqual(state.draftId, corruptedId, 'this tab moved to a fresh slot');
+  assert.match(state.draftIssue ?? '', /已保留/);
+
+  const exported = JSON.parse(state.exportCorruptedDraftsText() ?? '[]') as Array<{
+    corrupted?: boolean;
+    raw?: string;
+  }>;
+  assert.equal(exported[0]?.raw, raw);
+  assert.equal(exported[0]?.corrupted, true);
+
+  // A later edit must not overwrite the damaged key.
+  state.saveCategories(categories('新改动'));
+  assert.equal(storage.local.getItem(corruptedKey), raw);
+
+  state.discardCorruptedDrafts();
+  assert.equal(storage.local.getItem(corruptedKey), null);
+  assert.equal(useNavStore.getState().corruptedDrafts.length, 0);
 });
 
 test('A01 ownVisible is removed while every site and field is preserved', async () => {

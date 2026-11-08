@@ -55,6 +55,35 @@ test.describe('public site search on the exported build', () => {
     await expect(dialog).toBeHidden();
   });
 
+  test('ArrowDown reaches the "show remaining" button and Enter expands it', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#home-search').click();
+    await page.keyboard.press('Control+k');
+
+    const dialog = page.getByRole('dialog', { name: '搜索' });
+    const input = page.locator('#global-search-input');
+    await input.fill(busiest.title);
+
+    const more = dialog.getByRole('button', { name: /显示剩余 \d+ 条/ });
+    await expect(more).toBeVisible();
+
+    let reached = false;
+    for (let step = 0; step < 60; step += 1) {
+      await input.press('ArrowDown');
+      if (await more.evaluate((element) => element.classList.contains('is-active'))) {
+        reached = true;
+        break;
+      }
+    }
+    expect(reached, 'the more button joins the keyboard sequence').toBe(true);
+
+    await input.press('Enter');
+    await expect(dialog.getByRole('button', { name: '收起' }).first()).toBeVisible();
+
+    await input.press('Escape');
+    await expect(dialog).toBeHidden();
+  });
+
   test('Enter during IME composition does not run the search', async ({ page }) => {
     await page.goto('/');
     const search = page.locator('#home-search');

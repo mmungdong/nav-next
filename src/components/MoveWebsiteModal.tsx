@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { ICategory, IWebsite } from '@/types';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 interface MoveWebsiteModalProps {
   categories: ICategory[];
@@ -19,13 +20,9 @@ export default function MoveWebsiteModal({
   onMove,
 }: MoveWebsiteModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // 当模态框关闭时重置选择
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedCategory(null);
-    }
-  }, [isOpen]);
+  useDialogFocus({ isOpen, dialogRef, onClose });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +40,10 @@ export default function MoveWebsiteModal({
         onClick={onClose}
       ></div>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="移动网站"
         className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90dvh] overflow-y-auto border border-white/30 dark:border-gray-700/50 pointer-events-auto custom-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >

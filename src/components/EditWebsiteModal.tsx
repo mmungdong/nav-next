@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { IWebsite } from '@/types';
 import { getWebInfo, getFaviconUrl } from '@/lib/webInfoApi';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 interface EditWebsiteModalProps {
   website?: IWebsite;
@@ -33,10 +34,15 @@ export default function EditWebsiteModal({
   // Identifies the only recognition request allowed to touch the form; closing
   // the modal or opening another site invalidates every earlier response.
   const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) {
       requestIdRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
       setIsFetching(false);
       return;
     }
@@ -49,30 +55,49 @@ export default function EditWebsiteModal({
     setFetchError(null);
   }, [isOpen, website]);
 
+  // Never leave a recognition request running after the modal unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   // Metadata lookup sends the full URL to a third party; it only runs on an
   // explicit click. Blur no longer triggers a request.
   const fetchWebInfo = useCallback(async (url: string) => {
     if (!url) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setIsFetching(true);
     setFetchError(null);
     try {
-      const webInfo = await getWebInfo(url);
+      const lookup = await getWebInfo(url, { signal: controller.signal });
       if (requestIdRef.current !== requestId) return;
       setFormData((prev) => ({
         ...prev,
-        name: prev.name || webInfo.title || '',
-        desc: prev.desc || webInfo.description || '',
-        icon: prev.icon || webInfo.url || getFaviconUrl(url) || '',
+        name: prev.name || lookup.info.title || '',
+        desc: prev.desc || lookup.info.description || '',
+        icon: prev.icon || lookup.info.url || getFaviconUrl(url) || '',
       }));
+      // A degraded lookup still fills the fallback, but says why.
+      if (lookup.error) setFetchError(lookup.error);
     } catch (error) {
-      if (requestIdRef.current !== requestId) return;
+      if (requestIdRef.current !== requestId || controller.signal.aborted) return;
       console.warn('获取网站信息失败:', error);
       setFetchError('自动识别失败，请手动填写名称和图标。');
     } finally {
-      if (requestIdRef.current === requestId) setIsFetching(false);
+      if (requestIdRef.current === requestId) {
+        setIsFetching(false);
+        abortRef.current = null;
+      }
     }
+  }, []);
+
+  const cancelFetch = useCallback(() => {
+    // Invalidate the in-flight request so its result can never touch the form.
+    requestIdRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsFetching(false);
   }, []);
 
   const isDirty = JSON.stringify(formData) !== initialSnapshot;
@@ -81,6 +106,8 @@ export default function EditWebsiteModal({
     if (isDirty && !window.confirm('表单还有未保存的内容，确认放弃？')) return;
     onClose();
   };
+
+  useDialogFocus({ isOpen, dialogRef, onClose: requestClose, initialFocusRef: urlInputRef });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -105,7 +132,13 @@ export default function EditWebsiteModal({
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={requestClose} />
 
-      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-y-auto transform transition-all border border-gray-100 dark:border-gray-700">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={website ? '编辑网站' : '添加新网站'}
+        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-y-auto transform transition-all border border-gray-100 dark:border-gray-700"
+      >
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/50">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
             {website ? '编辑网站' : '添加新网站'}
@@ -126,6 +159,7 @@ export default function EditWebsiteModal({
             </label>
             <div className="relative">
               <input
+                ref={urlInputRef}
                 type="url"
                 name="url"
                 value={formData.url}
@@ -136,11 +170,11 @@ export default function EditWebsiteModal({
               />
               <button
                 type="button"
-                onClick={() => fetchWebInfo(formData.url)}
-                disabled={isFetching || !formData.url}
+                onClick={() => (isFetching ? cancelFetch() : fetchWebInfo(formData.url))}
+                disabled={!isFetching && !formData.url}
                 className="absolute right-2 top-1.5 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50 transition-colors"
               >
-                {isFetching ? '获取中...' : '智能识别'}
+                {isFetching ? '取消' : '智能识别'}
               </button>
             </div>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

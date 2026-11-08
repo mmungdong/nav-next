@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo, useSyncExternalStore } from 'react';
 import { useNavStore } from '@/stores/navStore';
 import { ICategory, IWebsite } from '@/types';
 import EditWebsiteModal from '@/components/EditWebsiteModal';
@@ -11,6 +11,15 @@ import WebsiteSortModal from '@/components/WebsiteSortModal';
 import { useAuthStore } from '@/stores/authStore';
 import MessageDisplay from '@/components/MessageDisplay';
 import WebsiteCardAdmin from '@/components/WebsiteCardAdmin';
+import { useFlashMessage } from '@/hooks/useFlashMessage';
+
+// The persisted sync time lives outside React; the server has no localStorage.
+const subscribeToStorage = (onChange: () => void): (() => void) => {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
+};
+const getServerLastSync = (): string | null => null;
 
 export default function WebManagementPage() {
   const {
@@ -18,6 +27,7 @@ export default function WebManagementPage() {
     loading,
     saveCategories,
     getLastSyncTime,
+    lastSyncAt,
     pushToRemote,
     checkRemote,
     dirty,
@@ -46,9 +56,14 @@ export default function WebManagementPage() {
   const [selectedCategory, setSelectedCategory] = useState<ICategory | null>(null);
 
   // 同步与消息状态
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'loading'; text: string } | null>(null);
-  const [isMessageVisible, setIsMessageVisible] = useState(false);
+  // The store holds this session's push; localStorage holds earlier sessions.
+  const persistedLastSync = useSyncExternalStore(
+    subscribeToStorage,
+    getLastSyncTime,
+    getServerLastSync
+  );
+  const lastSyncTime = lastSyncAt ?? persistedLastSync;
+  const { message, flash: showMessage } = useFlashMessage(3000);
   const [savingRemote, setSavingRemote] = useState(false);
 
   // 排序状态
@@ -102,23 +117,12 @@ export default function WebManagementPage() {
 
   // --- CRUD 操作处理 ---
 
-  // 显示消息辅助函数
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setIsMessageVisible(true);
-    setTimeout(() => {
-      setMessage(null);
-      setIsMessageVisible(false);
-    }, 3000);
-  };
-
   const handlePushToRemote = async () => {
     if (!githubToken) return showMessage('error', '请先配置 GitHub Token');
     setSavingRemote(true);
     const result = await pushToRemote(githubToken);
     setSavingRemote(false);
     if (result.status === 'success') {
-      setLastSyncTime(new Date().toISOString());
       showMessage('success', 'GitHub 已更新；首页需等待部署后才会显示新数据');
       return;
     }
@@ -191,7 +195,7 @@ export default function WebManagementPage() {
         saved ? 'success' : 'error',
         saved ? '网站已删除，尚未推送' : '本机保存失败，改动仅在当前页面内'
       );
-    } catch (error) {
+    } catch {
       showMessage('error', '删除失败');
     }
   };
@@ -229,7 +233,7 @@ export default function WebManagementPage() {
         saved ? 'success' : 'error',
         saved ? '网站已移动，尚未推送' : '本机保存失败，改动仅在当前页面内'
       );
-    } catch (error) {
+    } catch {
       showMessage('error', '移动失败');
     }
   };
@@ -262,7 +266,7 @@ export default function WebManagementPage() {
         saved ? 'success' : 'error',
         saved ? '分类已保存到本机，尚未推送' : '本机保存失败，改动仅在当前页面内'
       );
-    } catch (error) {
+    } catch {
       showMessage('error', '分类保存失败');
     }
   };
@@ -283,7 +287,7 @@ export default function WebManagementPage() {
         saved ? 'success' : 'error',
         saved ? '分类已删除，尚未推送' : '本机保存失败，改动仅在当前页面内'
       );
-    } catch (error) {
+    } catch {
       showMessage('error', '删除分类失败');
     }
   };
@@ -327,12 +331,6 @@ export default function WebManagementPage() {
     showMessage(saved ? 'success' : 'error', saved ? '网站排序已保存到本机' : '本机保存失败，排序仅在页面内');
   };
 
-  // 初始化：数据由 AdminLayout 的同步守卫统一恢复草稿，这里只刷新显示时间。
-  useEffect(() => {
-    const lastSync = getLastSyncTime();
-    if (lastSync) setLastSyncTime(lastSync);
-  }, [getLastSyncTime]);
-
   // 添加网站
   const handleAddWebsite = (category: ICategory) => {
     setSelectedCategory(category);
@@ -353,7 +351,7 @@ export default function WebManagementPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 md:p-8">
-      <MessageDisplay message={message} isMessageVisible={isMessageVisible} />
+      <MessageDisplay message={message} isMessageVisible={message !== null} />
 
       {/* 顶部 Header */}
       <div className="max-w-7xl mx-auto mb-8">
@@ -630,12 +628,15 @@ export default function WebManagementPage() {
         onSave={handleSaveWebsite}
       />
 
-      <EditCategoryModal
-        category={editingCategory}
-        isOpen={isEditCategoryModalOpen}
-        onClose={() => setIsEditCategoryModalOpen(false)}
-        onSave={handleSaveCategory}
-      />
+      {isEditCategoryModalOpen && (
+        <EditCategoryModal
+          key={editingCategory?.id ?? 'new'}
+          category={editingCategory}
+          isOpen={isEditCategoryModalOpen}
+          onClose={() => setIsEditCategoryModalOpen(false)}
+          onSave={handleSaveCategory}
+        />
+      )}
 
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
@@ -651,13 +652,15 @@ export default function WebManagementPage() {
         itemName={deletingCategory?.title || ''}
       />
 
-      <MoveWebsiteModal
-        categories={categories}
-        website={movingWebsite}
-        isOpen={isMoveModalOpen}
-        onClose={() => setIsMoveModalOpen(false)}
-        onMove={confirmMoveWebsite}
-      />
+      {isMoveModalOpen && (
+        <MoveWebsiteModal
+          categories={categories}
+          website={movingWebsite}
+          isOpen={isMoveModalOpen}
+          onClose={() => setIsMoveModalOpen(false)}
+          onMove={confirmMoveWebsite}
+        />
+      )}
 
       <CategorySortModal
         categories={categories}

@@ -1,5 +1,8 @@
 'use client';
 
+import { useRef } from 'react';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
+
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,6 +16,12 @@ export default function DeleteConfirmModal({
   onConfirm,
   itemName,
 }: DeleteConfirmModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // Destructive prompts start on "取消", never on the delete button.
+  useDialogFocus({ isOpen, dialogRef, onClose, initialFocusRef: cancelRef });
+
   if (!isOpen) return null;
 
   return (
@@ -22,6 +31,10 @@ export default function DeleteConfirmModal({
         onClick={onClose}
       ></div>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="确认删除"
         className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-3xl rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto border border-white/30 dark:border-gray-700/50"
         onClick={(e) => e.stopPropagation()}
       >
@@ -31,7 +44,8 @@ export default function DeleteConfirmModal({
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
+            aria-label="关闭"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
           >
             <svg
               className="h-6 w-6"
@@ -80,9 +94,10 @@ export default function DeleteConfirmModal({
 
         <div className="px-6 py-4 bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm flex justify-end space-x-3 rounded-b-2xl">
           <button
+            ref={cancelRef}
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+            className="px-5 py-2.5 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-600/50 backdrop-blur-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl hover:bg-white/70 dark:hover:bg-gray-500/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
           >
             取消
           </button>

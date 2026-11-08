@@ -79,6 +79,20 @@ const createDraftId = (): string => {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
+/** Keeps the tab id stable when sessionStorage is unavailable or disabled. */
+const fallbackTabDraftIds = new WeakMap<StorageLike, Map<string, string>>();
+const fallbackTabDraftIdsWithoutSession = new Map<string, string>();
+
+const fallbackTabDraftIdsFor = (session: StorageLike | null): Map<string, string> => {
+  if (!session) return fallbackTabDraftIdsWithoutSession;
+  let map = fallbackTabDraftIds.get(session);
+  if (!map) {
+    map = new Map<string, string>();
+    fallbackTabDraftIds.set(session, map);
+  }
+  return map;
+};
+
 /** Remembers this tab's draft id for the session; a new tab gets its own draft. */
 export function getOrCreateTabDraftId(
   resourceKey: string,
@@ -90,15 +104,39 @@ export function getOrCreateTabDraftId(
       const existing = session.getItem(key);
       if (existing) return existing;
     } catch {
-      // storage disabled: still return an in-memory id so editing stays possible
+      // storage disabled: the in-memory fallback below keeps the id stable
     }
   }
+  // Only a session that previously failed to persist has a fallback entry.
+  const fallback = session
+    ? fallbackTabDraftIds.get(session)?.get(resourceKey)
+    : fallbackTabDraftIdsWithoutSession.get(resourceKey);
+  if (fallback) return fallback;
   const id = createDraftId();
   if (session) {
     try {
       session.setItem(key, id);
+      return id;
     } catch {
       // in-memory only
+    }
+  }
+  fallbackTabDraftIdsFor(session).set(resourceKey, id);
+  return id;
+}
+
+/** Replaces this tab's draft id so new saves cannot overwrite an existing key. */
+export function rotateTabDraftId(
+  resourceKey: string,
+  session: StorageLike | null = getSessionStorage()
+): string {
+  const id = createDraftId();
+  fallbackTabDraftIdsFor(session).set(resourceKey, id);
+  if (session) {
+    try {
+      session.setItem(`${TAB_DRAFT_ID_PREFIX}${resourceKey}`, id);
+    } catch {
+      // in-memory only; the damaged key is still found by listCorruptedDrafts
     }
   }
   return id;
@@ -204,6 +242,92 @@ export function listDrafts<T>(
   return drafts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+export interface CorruptedDraft {
+  draftId: string;
+  raw: string;
+}
+
+/** Damaged drafts keep their raw text so the user can still export them. */
+export function listCorruptedDrafts(
+  resourceKey: string,
+  storage: StorageLike | null = getLocalStorage()
+): CorruptedDraft[] {
+  if (!storage) return [];
+  const prefix = `${DRAFT_PREFIX}${encodeURIComponent(resourceKey)}:`;
+  const corrupted: CorruptedDraft[] = [];
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (!key || !key.startsWith(prefix)) continue;
+      const raw = storage.getItem(key);
+      if (raw === null) continue;
+      let valid = false;
+      try {
+        valid = isValidDraftEnvelope(JSON.parse(raw) as unknown, resourceKey);
+      } catch {
+        valid = false;
+      }
+      if (!valid) corrupted.push({ draftId: key.slice(prefix.length), raw });
+    }
+  } catch {
+    // storage unavailable: leave whatever is there untouched
+  }
+  return corrupted;
+}
+
+export const MAX_DRAFTS_PER_RESOURCE = 5;
+export const MAX_BACKUPS_PER_RESOURCE = 5;
+
+/**
+ * Caps stale draft slots so a fresh tab per session cannot grow storage forever.
+ * The active slot always survives; damaged drafts are untouched.
+ */
+export function pruneDrafts(
+  resourceKey: string,
+  keepDraftId: string | null,
+  storage: StorageLike | null = getLocalStorage(),
+  max = MAX_DRAFTS_PER_RESOURCE
+): void {
+  if (!storage) return;
+  try {
+    const keep = new Set<string>();
+    if (keepDraftId) keep.add(keepDraftId);
+    const drafts = listDrafts(resourceKey, storage);
+    for (const draft of drafts) {
+      if (keep.size >= max) break;
+      keep.add(draft.draftId);
+    }
+    for (const draft of drafts) {
+      if (!keep.has(draft.draftId)) removeDraft(resourceKey, draft.draftId, storage);
+    }
+  } catch {
+    // best effort; stale drafts are recoverable, a crash is not
+  }
+}
+
+/** Caps backups per resource, newest first. */
+export function pruneBackups(
+  resourceKey: string,
+  storage: StorageLike | null = getLocalStorage(),
+  max = MAX_BACKUPS_PER_RESOURCE
+): void {
+  if (!storage) return;
+  try {
+    const prefix = `${BACKUP_PREFIX}${encodeURIComponent(resourceKey)}:`;
+    const entries: { key: string; stamp: number }[] = [];
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (!key || !key.startsWith(prefix)) continue;
+      const stamp = Number(key.slice(key.lastIndexOf(':') + 1));
+      entries.push({ key, stamp: Number.isFinite(stamp) ? stamp : 0 });
+    }
+    entries.sort((a, b) => b.stamp - a.stamp);
+    for (const entry of entries.slice(max)) storage.removeItem(entry.key);
+  } catch {
+    // best effort
+  }
+}
+
 export function saveBackup(
   resourceKey: string,
   kind: BackupKind,
@@ -214,6 +338,7 @@ export function saveBackup(
   const key = `${BACKUP_PREFIX}${encodeURIComponent(resourceKey)}:${kind}:${Date.now()}`;
   try {
     storage.setItem(key, JSON.stringify({ savedAt: new Date().toISOString(), data }));
+    pruneBackups(resourceKey, storage);
     return { ok: true, key, problem: null };
   } catch (error) {
     return { ok: false, key: null, problem: classifyStorageError(error) };

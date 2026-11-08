@@ -9,6 +9,8 @@ import {
   listDrafts,
   loadDraft,
   parseImportedDraft,
+  pruneBackups,
+  pruneDrafts,
   removeDraft,
   saveBackup,
   saveDraft,
@@ -133,4 +135,85 @@ test('backups are written with their own keys', () => {
   assert.equal(result.ok, true);
   assert.ok(result.key);
   assert.ok(storage.keys().some((key) => key.startsWith('navnext:backup:v2:')));
+});
+
+test('the tab draft id stays stable when session storage is unavailable', () => {
+  // A disabled sessionStorage keeps returning a new id, piling up draft slots.
+  const first = getOrCreateTabDraftId(`${resourceKey}-no-session`, null);
+  const second = getOrCreateTabDraftId(`${resourceKey}-no-session`, null);
+  assert.equal(first, second);
+
+  const failingSession: StorageLike = {
+    length: 0,
+    key: () => null,
+    getItem: () => null,
+    setItem: () => {
+      throw new Error('disabled');
+    },
+    removeItem: () => undefined,
+  };
+  const third = getOrCreateTabDraftId(`${resourceKey}-failing`, failingSession);
+  const fourth = getOrCreateTabDraftId(`${resourceKey}-failing`, failingSession);
+  assert.equal(third, fourth);
+});
+
+const agedDraft = (draftId: string, day: number) => ({
+  ...draft(draftId, day, draftId),
+  updatedAt: new Date(Date.UTC(2026, 0, day)).toISOString(),
+});
+
+test('pruneDrafts keeps the active draft plus the newest ones', () => {
+  const storage = new MemoryStorage();
+  for (let day = 1; day <= 7; day += 1) {
+    saveDraft(agedDraft(`tab-${day}`, day), storage);
+  }
+  // The active slot is the oldest, so it must not be dropped by recency alone.
+  pruneDrafts(resourceKey, 'tab-1', storage);
+
+  const remaining = listDrafts(resourceKey, storage).map((item) => item.draftId);
+  assert.equal(remaining.length, 5);
+  assert.ok(remaining.includes('tab-1'), 'the active draft survives');
+  assert.deepEqual(remaining.sort(), ['tab-1', 'tab-4', 'tab-5', 'tab-6', 'tab-7']);
+  assert.equal(loadDraft(resourceKey, 'tab-2', storage).draft, null);
+});
+
+test('pruneBackups keeps only the newest backups and preserves corrupted drafts', () => {
+  const storage = new MemoryStorage();
+  const prefix = `navnext:backup:v2:${encodeURIComponent(resourceKey)}:`;
+  for (let stamp = 1; stamp <= 7; stamp += 1) {
+    storage.setItem(`${prefix}local-draft:${stamp}`, '{}');
+  }
+  pruneBackups(resourceKey, storage);
+
+  const remaining = storage
+    .keys()
+    .filter((key) => key.startsWith(prefix))
+    .sort();
+  assert.deepEqual(remaining, [
+    `${prefix}local-draft:3`,
+    `${prefix}local-draft:4`,
+    `${prefix}local-draft:5`,
+    `${prefix}local-draft:6`,
+    `${prefix}local-draft:7`,
+  ]);
+
+  const corruptedKey = `navnext:draft:v2:${encodeURIComponent(resourceKey)}:broken`;
+  storage.setItem(corruptedKey, '{not json');
+  pruneDrafts(resourceKey, 'tab-x', storage);
+  assert.equal(storage.getItem(corruptedKey), '{not json');
+});
+
+test('saveBackup prunes old backups of the same resource', () => {
+  const storage = new MemoryStorage();
+  const prefix = `navnext:backup:v2:${encodeURIComponent(resourceKey)}:`;
+  for (let stamp = 1; stamp <= 6; stamp += 1) {
+    storage.setItem(`${prefix}remote-snapshot:${stamp}`, '{}');
+  }
+  const saved = saveBackup(resourceKey, 'local-draft', { fresh: true }, storage);
+  assert.equal(saved.ok, true);
+
+  const backups = storage.keys().filter((key) => key.startsWith(prefix));
+  assert.equal(backups.length, 5);
+  assert.ok(saved.key && backups.includes(saved.key));
+  assert.equal(backups.includes(`${prefix}remote-snapshot:1`), false);
 });

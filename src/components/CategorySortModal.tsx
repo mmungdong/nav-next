@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 import { ICategory } from '@/types';
 
 interface CategorySortModalProps {
@@ -18,7 +19,10 @@ export default function CategorySortModal({
 }: CategorySortModalProps) {
   const [orderedIds, setOrderedIds] = useState<number[]>([]);
   const [stale, setStale] = useState(false);
-  const snapshotRef = useRef('');
+  const snapshotRef = useRef<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useDialogFocus({ isOpen, dialogRef, onClose });
 
   const reload = () => {
     const ids = categories.map((category) => category.id);
@@ -36,7 +40,7 @@ export default function CategorySortModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || !snapshotRef.current) return;
+    if (!isOpen || snapshotRef.current === null) return;
     if (categories.map((category) => category.id).join(',') !== snapshotRef.current) {
       setStale(true);
     }
@@ -83,6 +87,7 @@ export default function CategorySortModal({
         onClick={onClose}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="分类排序"
