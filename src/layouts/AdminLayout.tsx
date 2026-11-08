@@ -1,29 +1,56 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useAuthStore } from '@/stores/authStore';
 import { useConfigStore } from '@/stores/configStore';
 import { useNavStore } from '@/stores/navStore';
 import AdminSidebar from '@/components/layout/AdminSidebar';
+import AdminSprite from '@/components/admin/AdminSprite';
+import Icon from '@/components/admin/Icon';
 import DraftTools from '@/components/DraftTools';
 import { useAdminSyncGuard } from '@/hooks/useAdminSyncGuard';
 import { useDialogFocus } from '@/hooks/useDialogFocus';
 import { isSyncSuccess } from '@/lib/syncTypes';
+import { hydrateAdminUi, useAdminUiStore } from '@/stores/adminUiStore';
+import './admin-shell.css';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+const PAGE_NAMES: Array<{ href: string; name: string }> = [
+  { href: '/system/web', name: '网站管理' },
+  { href: '/system/search', name: '搜索管理' },
+  { href: '/system/setting', name: '系统设置' },
+  { href: '/system/info', name: '系统信息' },
+];
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, authStatus, authError, checkAuth, logout, githubToken } =
     useAuthStore();
-  const { setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
+  const githubUser = useAuthStore((s) => s.githubUser);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [overwriteTarget, setOverwriteTarget] = useState<'nav' | 'config' | null>(null);
   const firstLinkRef = useRef<HTMLAnchorElement | null>(null);
+
+  const sidebarCollapsed = useAdminUiStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useAdminUiStore((s) => s.setSidebarCollapsed);
+  const searchQuery = useAdminUiStore((s) => s.searchQuery);
+  const setSearchQuery = useAdminUiStore((s) => s.setSearchQuery);
+
+  useEffect(() => {
+    hydrateAdminUi();
+  }, []);
+
+  const currentPageName =
+    PAGE_NAMES.find((page) => pathname.startsWith(page.href))?.name ?? '后台';
+  const showTopbarSearch = pathname.startsWith('/system/web');
+
 
   const enabled = (authStatus === 'authenticated' || authStatus === 'offline') && isAuthenticated;
   const { status, error, retry, confirmLeave, pendingLeave } = useAdminSyncGuard(enabled);
@@ -35,7 +62,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     retry();
   };
 
-  const siteConfig = useConfigStore((s) => s.siteConfig);
   const navConflict = useNavStore((s) => s.conflict);
   const navConflictData = useNavStore((s) => s.conflict?.remoteData);
   const navBaseline = useNavStore((s) => s.baseline);
@@ -118,11 +144,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     if (authStatus === 'signed_out') router.push('/login');
   }, [authStatus, router]);
 
-  // Follow the stored theme once the config is available in admin.
-  useEffect(() => {
-    if (!enabled) return;
-    setTheme(siteConfig.site.theme);
-  }, [enabled, setTheme, siteConfig.site.theme]);
+  // The configured default theme is applied once by ConfigThemeSync; forcing it
+  // here on every render would undo the in-app theme toggle.
 
   const handleLogout = () => {
     confirmLeave(() => {
@@ -226,260 +249,299 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-      <button
-        type="button"
-        onClick={() => setSidebarOpen(true)}
-        aria-expanded={sidebarOpen}
-        aria-controls="admin-sidebar"
-        className="lg:hidden fixed top-3 left-3 z-30 min-w-[44px] min-h-[44px] px-3 rounded-lg bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
-      >
-        菜单
-      </button>
+    <div className={`adm${sidebarOpen ? ' mobile-nav-open' : ''}`}>
+      <AdminSprite />
+      <div className={`app${sidebarCollapsed ? ' collapsed' : ''}`}>
+        {sidebarOpen && (
+          <div className="nav-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+        )}
 
-      {sidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/40"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+        <aside
+          id="admin-sidebar"
+          ref={sidebarRef}
+          role={sidebarOpen ? 'dialog' : undefined}
+          aria-modal={sidebarOpen ? true : undefined}
+          aria-label={sidebarOpen ? '后台导航' : undefined}
+          className="sidebar"
+        >
+          <AdminSidebar
+            onLogout={handleLogout}
+            onBackHome={handleBackHome}
+            onNavigate={() => setSidebarOpen(false)}
+            firstLinkRef={firstLinkRef}
+          />
+        </aside>
 
-      <aside
-        id="admin-sidebar"
-        ref={sidebarRef}
-        role={sidebarOpen ? 'dialog' : undefined}
-        aria-modal={sidebarOpen ? true : undefined}
-        aria-label={sidebarOpen ? '后台导航' : undefined}
-        className={`fixed inset-y-0 left-0 z-50 w-[200px] lg:w-[250px] transform transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <AdminSidebar
-          onLogout={handleLogout}
-          onBackHome={handleBackHome}
-          onNavigate={() => setSidebarOpen(false)}
-          firstLinkRef={firstLinkRef}
-        />
-      </aside>
-
-      <div className="flex-1 min-w-0 p-4 md:p-6 pt-16 lg:pt-6">
-        {(navRecoverableDrafts.length > 0 || configRecoverableDrafts.length > 0) && (
-          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-            <p className="mb-2">
-              发现未恢复的本机草稿（可能来自上次会话或其他标签页）。恢复后仍只在本机，推送前不会覆盖远程。
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {navRecoverableDrafts.map((draft) => (
-                <button
-                  key={draft.draftId}
-                  type="button"
-                  onClick={() => navRestoreDraft(draft.draftId)}
-                  className="px-3 py-2 min-h-[44px] rounded-md bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700"
-                >
-                  恢复网站数据 · {new Date(draft.updatedAt).toLocaleString()}
-                </button>
-              ))}
-              {configRecoverableDrafts.map((draft) => (
-                <button
-                  key={draft.draftId}
-                  type="button"
-                  onClick={() => configRestoreDraft(draft.draftId)}
-                  className="px-3 py-2 min-h-[44px] rounded-md bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700"
-                >
-                  恢复站点配置 · {new Date(draft.updatedAt).toLocaleString()}
-                </button>
-              ))}
+        <div className="main">
+          <header className="topbar">
+            <div className="topbar-left">
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => {
+                  if (window.matchMedia('(max-width: 720px)').matches) {
+                    setSidebarOpen(!sidebarOpen);
+                    return;
+                  }
+                  setSidebarCollapsed(!sidebarCollapsed);
+                }}
+                aria-expanded={sidebarOpen || !sidebarCollapsed}
+                aria-controls="admin-sidebar"
+                title={sidebarCollapsed ? '展开侧栏' : '收起侧栏'}
+                aria-label={sidebarCollapsed ? '展开侧栏' : '收起侧栏'}
+              >
+                <Icon name="panel" />
+              </button>
+              <nav className="crumbs" aria-label="面包屑">
+                <span className="crumb-root">后台</span>
+                <Icon name="chevron" className="crumb-sep" />
+                <span className="crumb-current">{currentPageName}</span>
+              </nav>
             </div>
-          </div>
-        )}
 
-        {(navPeerNotice || configPeerNotice) && (
-          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
-            <span>{navPeerNotice ?? configPeerNotice}</span>
-            <button
-              type="button"
-              onClick={() => {
-                navDismissPeerNotice();
-                configDismissPeerNotice();
-              }}
-              className="underline font-medium"
-            >
-              知道了
-            </button>
-          </div>
-        )}
-
-        <div className="mb-4 flex justify-end">
-          <DraftTools />
-        </div>
-
-        {authStatus === 'offline' && (
-          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-            {authError ?? '当前离线：凭据和草稿已保留，可以继续编辑，但暂时不能推送。'}
-            <button
-              onClick={() => void retryConnection()}
-              className="ml-3 underline font-medium"
-            >
-              重试连接
-            </button>
-            <button
-              onClick={() => router.push('/login')}
-              className="ml-3 underline font-medium"
-            >
-              重新授权
-            </button>
-          </div>
-        )}
-
-        {(navConflict || configConflict) && (
-          <div className="mb-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 space-y-3">
-            <p className="font-medium text-red-800 dark:text-red-200">检测到远程冲突，已停止自动覆盖</p>
-            {navConflict && (
-              <div className="text-sm text-red-700 dark:text-red-300 space-y-2">
-                <p>
-                  网站数据：远程已被其他设备更新
-                  {remoteChangeSummary && (
-                    <span className="ml-1">
-                      （远程新增 {remoteChangeSummary.added}、删除 {remoteChangeSummary.removed}、
-                      修改 {remoteChangeSummary.modified}
-                      {remoteChangeSummary.moved ? `、跨分类移动 ${remoteChangeSummary.moved}` : ''}
-                      {remoteChangeSummary.reordered ? '、顺序变化' : ''}）
-                    </span>
-                  )}
-                  。本机草稿已保留。
-                </p>
-                <div className="flex flex-wrap gap-2">
+            {showTopbarSearch && (
+              <div className="search-wrap" role="search">
+                <Icon name="search" />
+                <input
+                  type="search"
+                  placeholder="搜索站点、描述或链接…"
+                  aria-label="跨分类搜索站点"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+                <kbd className="search-kbd mono" aria-hidden="true">
+                  /
+                </kbd>
+                {searchQuery && (
                   <button
-                    onClick={() => handleAdopt('nav')}
-                    className="px-3 py-2 rounded-md bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700"
+                    className="search-clear"
+                    type="button"
+                    aria-label="清除搜索"
+                    title="清除搜索"
+                    onClick={() => setSearchQuery('')}
                   >
-                    {navAdoptBlocked && adoptWithoutBackup
-                      ? '仍要采用远程（不保留副本）'
-                      : '采用远程（放弃本机）'}
+                    <Icon name="x" />
                   </button>
+                )}
+              </div>
+            )}
+
+            <div className="topbar-right">
+              <button
+                className="icon-btn theme-toggle"
+                type="button"
+                aria-label={resolvedTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+                title={resolvedTheme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+                aria-pressed={resolvedTheme === 'dark'}
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              >
+                <Icon name="moon" className="icon-moon" />
+                <Icon name="sun" className="icon-sun" />
+              </button>
+              <span className="topbar-sep" aria-hidden="true" />
+              <div className="user-chip" title={githubUser?.login ?? '站点所有者'}>
+                <span className="avatar" aria-hidden="true">
+                  {(githubUser?.login ?? 'M').charAt(0).toUpperCase()}
+                </span>
+                <span className="user-name">站点所有者</span>
+              </div>
+            </div>
+          </header>
+
+          <main className="page">
+            <div className="page-inner">
+              {(navRecoverableDrafts.length > 0 || configRecoverableDrafts.length > 0) && (
+                <div className="banner warn">
+                  <div className="banner-body">
+                    <p>
+                      发现未恢复的本机草稿（可能来自上次会话或其他标签页）。恢复后仍只在本机，推送前不会覆盖远程。
+                    </p>
+                    <div className="banner-actions">
+                      {navRecoverableDrafts.map((draft) => (
+                        <button
+                          key={draft.draftId}
+                          type="button"
+                          className="btn sm btn-ghost"
+                          onClick={() => navRestoreDraft(draft.draftId)}
+                        >
+                          恢复网站数据 · {new Date(draft.updatedAt).toLocaleString()}
+                        </button>
+                      ))}
+                      {configRecoverableDrafts.map((draft) => (
+                        <button
+                          key={draft.draftId}
+                          type="button"
+                          className="btn sm btn-ghost"
+                          onClick={() => configRestoreDraft(draft.draftId)}
+                        >
+                          恢复站点配置 · {new Date(draft.updatedAt).toLocaleString()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(navPeerNotice || configPeerNotice) && (
+                <div className="banner info">
+                  <div className="banner-body">
+                    <span>{navPeerNotice ?? configPeerNotice}</span>
+                  </div>
                   <button
-                    onClick={() => setOverwriteTarget('nav')}
-                    className="px-3 py-2 rounded-md bg-red-600 text-white"
+                    type="button"
+                    className="btn sm btn-ghost"
+                    onClick={() => {
+                      navDismissPeerNotice();
+                      configDismissPeerNotice();
+                    }}
                   >
-                    用本机版本覆盖
+                    知道了
                   </button>
-                  <span className="px-3 py-2 text-xs text-red-600 dark:text-red-300">
-                    保留草稿：关闭本提示即可，推送会保持锁定
+                </div>
+              )}
+
+              {authStatus === 'offline' && (
+                <div className="banner warn">
+                  <div className="banner-body">
+                    <p>{authError ?? '当前离线：凭据和草稿已保留，可以继续编辑，但暂时不能推送。'}</p>
+                  </div>
+                  <div className="banner-actions">
+                    <button type="button" className="btn sm btn-ghost" onClick={() => void retryConnection()}>
+                      重试连接
+                    </button>
+                    <button type="button" className="btn sm btn-ghost" onClick={() => router.push('/login')}>
+                      重新授权
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {(navConflict || configConflict) && (
+                <div className="conflict">
+                  <span className="conflict-ico" aria-hidden="true">
+                    <Icon name="alert" />
                   </span>
+                  <div className="conflict-body">
+                    <div className="conflict-title">检测到远程冲突，已停止自动覆盖</div>
+                    {navConflict && (
+                      <div className="conflict-detail">
+                        <p>
+                          网站数据：远程已被其他设备更新
+                          {remoteChangeSummary && (
+                            <span className="mono">
+                              （新增 {remoteChangeSummary.added}、删除 {remoteChangeSummary.removed}、修改{' '}
+                              {remoteChangeSummary.modified}
+                              {remoteChangeSummary.moved ? `、跨分类移动 ${remoteChangeSummary.moved}` : ''}
+                              {remoteChangeSummary.reordered ? '、顺序变化' : ''}）
+                            </span>
+                          )}
+                          。本机草稿已保留。
+                        </p>
+                        <div className="conflict-actions">
+                          <button className="btn sm btn-ghost" onClick={() => handleAdopt('nav')}>
+                            {navAdoptBlocked && adoptWithoutBackup
+                              ? '仍要采用远程（不保留副本）'
+                              : '采用远程（放弃本机）'}
+                          </button>
+                          <button className="btn sm btn-danger" onClick={() => setOverwriteTarget('nav')}>
+                            用本机版本覆盖
+                          </button>
+                        </div>
+                        {navAdoptBlocked && (
+                          <label className="conflict-consent">
+                            <input
+                              type="checkbox"
+                              checked={adoptWithoutBackup}
+                              onChange={(event) => setAdoptWithoutBackup(event.target.checked)}
+                            />
+                            我已导出草稿，确认放弃本机改动（不保留恢复副本）
+                          </label>
+                        )}
+                      </div>
+                    )}
+                    {configConflict && (
+                      <div className="conflict-detail">
+                        <p>站点配置：远程已被其他设备更新，本机草稿已保留。</p>
+                        <div className="conflict-actions">
+                          <button className="btn sm btn-ghost" onClick={() => handleAdopt('config')}>
+                            {configAdoptBlocked && adoptWithoutBackup
+                              ? '仍要采用远程（不保留副本）'
+                              : '采用远程（放弃本机）'}
+                          </button>
+                          <button className="btn sm btn-danger" onClick={() => setOverwriteTarget('config')}>
+                            用本机版本覆盖
+                          </button>
+                        </div>
+                        {configAdoptBlocked && (
+                          <label className="conflict-consent">
+                            <input
+                              type="checkbox"
+                              checked={adoptWithoutBackup}
+                              onChange={(event) => setAdoptWithoutBackup(event.target.checked)}
+                            />
+                            我已导出草稿，确认放弃本机改动（不保留恢复副本）
+                          </label>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {navAdoptBlocked && (
-                  <label className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
-                    <input
-                      type="checkbox"
-                      checked={adoptWithoutBackup}
-                      onChange={(event) => setAdoptWithoutBackup(event.target.checked)}
-                      className="mt-0.5"
-                    />
-                    我已导出草稿，确认放弃本机改动（不保留恢复副本）
-                  </label>
-                )}
-              </div>
-            )}
-            {configConflict && (
-              <div className="text-sm text-red-700 dark:text-red-300 space-y-2">
-                <p>站点配置：远程已被其他设备更新，本机草稿已保留。</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => handleAdopt('config')}
-                    className="px-3 py-2 rounded-md bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700"
-                  >
-                    {configAdoptBlocked && adoptWithoutBackup
-                      ? '仍要采用远程（不保留副本）'
-                      : '采用远程（放弃本机）'}
-                  </button>
-                  <button
-                    onClick={() => setOverwriteTarget('config')}
-                    className="px-3 py-2 rounded-md bg-red-600 text-white"
-                  >
-                    用本机版本覆盖
-                  </button>
-                </div>
-                {configAdoptBlocked && (
-                  <label className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
-                    <input
-                      type="checkbox"
-                      checked={adoptWithoutBackup}
-                      onChange={(event) => setAdoptWithoutBackup(event.target.checked)}
-                      className="mt-0.5"
-                    />
-                    我已导出草稿，确认放弃本机改动（不保留恢复副本）
-                  </label>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {conflictMessage && (
-          <p className="mb-4 text-sm text-gray-700 dark:text-gray-200">{conflictMessage}</p>
-        )}
+              {conflictMessage && <p className="conflict-message">{conflictMessage}</p>}
 
-        {children}
+              {children}
+
+              <div className="page-tools">
+                <DraftTools />
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
 
       {pendingLeave && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={pendingLeave.onCancel} />
+        <div className="modal-backdrop" role="presentation" onClick={pendingLeave.onCancel}>
           <div
             ref={leaveDialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="未推送的改动"
-            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90dvh] overflow-y-auto"
+            className="modal-panel"
+            onClick={(event) => event.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {pendingLeave.message}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              保存会推送到 GitHub；保留草稿会留在本机，下次进入可恢复；丢弃会放弃本机改动（会先保存恢复副本）。
-            </p>
-            {pendingLeave.error && (
-              <p className="text-sm text-red-600 dark:text-red-400 mb-4">{pendingLeave.error}</p>
-            )}
+            <div className="modal-head">
+              <div>
+                <h2>{pendingLeave.message}</h2>
+                <p>
+                  保存会推送到 GitHub；保留草稿会留在本机，下次进入可恢复；丢弃会放弃本机改动（会先保存恢复副本）。
+                </p>
+              </div>
+            </div>
+            {pendingLeave.error && <p className="modal-note danger">{pendingLeave.error}</p>}
             {pendingLeave.discardBlocked && (
-              <div className="mb-4 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 space-y-2">
-                <p className="text-xs text-red-700 dark:text-red-300">
+              <div className="modal-note danger">
+                <p>
                   恢复副本未能写入本机，改动已保留。请先取消并使用「导出草稿」保存；确认不再需要恢复时，可直接丢弃。
                 </p>
-                <button
-                  onClick={pendingLeave.onDiscardWithoutBackup}
-                  className="px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
-                >
+                <button className="btn sm btn-danger" onClick={pendingLeave.onDiscardWithoutBackup}>
                   仍要丢弃（不保留恢复副本）
                 </button>
               </div>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
-              <button
-                ref={leaveCancelRef}
-                onClick={pendingLeave.onCancel}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg"
-              >
+            <div className="modal-foot">
+              <button ref={leaveCancelRef} onClick={pendingLeave.onCancel} className="btn btn-ghost">
                 取消
               </button>
-              <button
-                onClick={pendingLeave.onDiscard}
-                className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-lg"
-              >
+              <button onClick={pendingLeave.onDiscard} className="btn btn-ghost danger-text">
                 丢弃并离开
               </button>
-              <button
-                onClick={pendingLeave.onKeep}
-                className="px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 rounded-lg"
-              >
+              <button onClick={pendingLeave.onKeep} className="btn btn-ghost">
                 保留草稿离开
               </button>
-              <button
-                onClick={pendingLeave.onSave}
-                disabled={pendingLeave.saving}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg"
-              >
+              <button onClick={pendingLeave.onSave} disabled={pendingLeave.saving} className="btn btn-primary">
                 {pendingLeave.saving ? '保存中…' : '保存并离开'}
               </button>
             </div>
@@ -488,34 +550,29 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}
 
       {overwriteTarget && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setOverwriteTarget(null)} />
+        <div className="modal-backdrop" role="presentation" onClick={() => setOverwriteTarget(null)}>
           <div
             ref={overwriteDialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="确认覆盖远程"
-            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6"
+            className="modal-panel danger"
+            onClick={(event) => event.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              确认用本机版本覆盖远程？
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              远程当前内容会先保存为本机恢复副本，然后以你刚审阅的远程 SHA 为基线提交本机版本。
-              如果这期间远程再次变化，仍会冲突，不会自动覆盖。
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                ref={overwriteCancelRef}
-                onClick={() => setOverwriteTarget(null)}
-                className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg"
-              >
+            <div className="modal-head">
+              <div>
+                <h2>确认用本机版本覆盖远程？</h2>
+                <p>
+                  远程当前内容会先保存为本机恢复副本，然后以你刚审阅的远程 SHA 为基线提交本机版本。
+                  如果这期间远程再次变化，仍会冲突，不会自动覆盖。
+                </p>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button ref={overwriteCancelRef} onClick={() => setOverwriteTarget(null)} className="btn btn-ghost">
                 取消
               </button>
-              <button
-                onClick={runOverwrite}
-                className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg"
-              >
+              <button onClick={runOverwrite} className="btn btn-danger">
                 确认覆盖
               </button>
             </div>

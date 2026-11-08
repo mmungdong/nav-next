@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* next-themes writes the theme to the <html> class, so `dark:` utilities have to
+   follow that class instead of Tailwind's default prefers-color-scheme query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
   Tailwind CSS v4 配置
   如果你需要自定义主题，可以使用 @theme 块，例如：

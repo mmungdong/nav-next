@@ -1,0 +1,255 @@
+/*
+  Additions the production shell needs on top of the generated v2 stylesheet:
+  banner/conflict variants that only exist in this app, text-based category
+  icons (real categories carry no icon SVG), and the mobile navigation drawer.
+  Everything stays inside .adm so the public site is untouched.
+*/
+
+@import '../components/admin/admin.css';
+
+/* Text stand-in for the prototype's named category icons. */
+.adm .cat-letter {
+  width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  flex: none;
+}
+
+.adm .cat-row.selected .cat-letter {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.adm .cat-hint-actions {
+  padding: 6px 10px 10px;
+}
+
+.adm .user-row {
+  position: relative;
+}
+
+.adm .user-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+/* Banners reuse the conflict card's layered surface instead of a new language. */
+.adm .banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 12.5px;
+}
+
+.adm .banner.warn {
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+.adm .banner.info {
+  border-color: var(--accent-border);
+  background: var(--accent-surface);
+  color: var(--fg);
+}
+
+.adm .banner-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adm .banner-body p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.adm .banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.adm .banner.warn .btn {
+  border-color: var(--warn-border);
+}
+
+.adm .conflict-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.adm .conflict-detail p {
+  margin: 0;
+}
+
+.adm .conflict-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.adm .conflict-message {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.adm .page-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* DraftTools keeps its own utility classes; this normalises it to the shell. */
+.adm .page-tools button {
+  min-height: 0;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.adm .page-tools button:hover {
+  background: var(--surface-3);
+  color: var(--fg);
+}
+
+.adm .page-tools .hidden {
+  display: none;
+}
+
+.adm .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.adm .modal-backdrop .modal-panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: min(88dvh, 720px);
+  overflow-y: auto;
+  box-shadow: var(--shadow-pop);
+}
+
+.adm .modal-head h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.adm .modal-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.adm .modal-note {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adm .modal-note.danger {
+  border: 1px solid var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-fg);
+}
+
+.adm .danger-text {
+  color: var(--danger-fg);
+}
+
+/* Mobile: the rail keeps icons only, so the toggle opens the full sidebar. */
+.adm .nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 720px) {
+  .adm.mobile-nav-open .app {
+    grid-template-columns: 264px minmax(0, 1fr);
+  }
+
+  .adm.mobile-nav-open .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 80;
+    width: 264px;
+  }
+
+  .adm.mobile-nav-open .brand-text,
+  .adm.mobile-nav-open .nav-pill span,
+  .adm.mobile-nav-open .side-label,
+  .adm.mobile-nav-open .cat-name,
+  .adm.mobile-nav-open .cat-count,
+  .adm.mobile-nav-open .cat-actions,
+  .adm.mobile-nav-open .cat-hint,
+  .adm.mobile-nav-open .user-meta,
+  .adm.mobile-nav-open .data-line span {
+    display: revert !important;
+  }
+
+  .adm.mobile-nav-open .nav-pill {
+    justify-content: flex-start;
+    padding: 0 12px;
+    width: auto;
+    margin: 0;
+  }
+
+  .adm.mobile-nav-open .brand {
+    justify-content: flex-start;
+    padding: 0 14px;
+  }
+
+  .adm.mobile-nav-open .cat-row {
+    padding: 2px 4px;
+    justify-content: flex-start;
+  }
+}
+
+/* Pages without the global search still need the right cluster pinned right. */
+.adm .topbar-right {
+  margin-left: auto;
+}
